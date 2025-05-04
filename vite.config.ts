@@ -84,11 +84,16 @@ export default defineConfig({
           return `assets/[name]-[hash][extname]`;
         },
       },
+      external: ['@supabase/supabase-js'],
     },
   },
   server: {
     headers: {
-      'Content-Type': 'text/css; charset=utf-8',
+      'Content-Security-Policy': "default-src 'self' https://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com",
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
     },
   },
 });
