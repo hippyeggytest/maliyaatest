@@ -1,99 +1,76 @@
-import  { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AuthContextType } from '../types';
-import db from '../db';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { supabase, supabaseAdmin, isAdmin } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  login: async () => {
-    throw new Error('login function not implemented');
-  },
-  logout: () => {},
-  error: null,
-});
+interface AuthContextType {
+  user: User | null;
+  isAdmin: boolean;
+  schoolId: number | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+}
 
-export const useAuth = () => useContext(AuthContext);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [schoolId, setSchoolId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          
-          // Check if the school is active for non-admin users
-          if (parsedUser.schoolId && parsedUser.role !== 'admin') {
-            const school = await db.schools.get(parsedUser.schoolId);
-            
-            // If school is inactive, don't log in the user
-            if (school && school.status === 'inactive') {
-              localStorage.removeItem('user');
-              setUser(null);
-              setError('المدرسة غير نشطة حالياً. يرجى التواصل مع مدير النظام.');
-              setLoading(false);
-              return;
-            }
-          }
-          
-          setUser(parsedUser);
-        }
-      } catch (err) {
-        console.error('Failed to fetch user: ', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setSchoolId(session?.user?.user_metadata?.school_id ?? null);
+      setIsAdminUser(session?.user?.user_metadata?.role === 'admin');
+      setLoading(false);
+    });
 
-    checkAuth();
+    // Listen for changes on auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setSchoolId(session?.user?.user_metadata?.school_id ?? null);
+      setIsAdminUser(session?.user?.user_metadata?.role === 'admin');
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (username: string, password: string): Promise<User> => {
-    setError(null);
-    try {
-      const user = await db.users.where({ username }).first();
-      
-      if (!user || user.password !== password) {
-        throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة');
-      }
-      
-      // Check if school is active for non-admin users
-      if (user.schoolId && user.role !== 'admin') {
-        const school = await db.schools.get(user.schoolId);
-        
-        if (school && school.status === 'inactive') {
-          throw new Error('المدرسة غير نشطة حالياً. يرجى التواصل مع مدير النظام.');
-        }
-      }
-      
-      // Remove password from stored user
-      const { password: _, ...userWithoutPassword } = user;
-      
-      // Store in local storage
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-      
-      setUser(userWithoutPassword);
-      return userWithoutPassword;
-    } catch (err) {
-      const error = err instanceof Error ? err.message : 'حدث خطأ أثناء تسجيل الدخول';
-      setError(error);
-      throw new Error(error);
-    }
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
   };
 
-  const logout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, error }}>
+    <AuthContext.Provider value={{
+      user,
+      isAdmin: isAdminUser,
+      schoolId,
+      loading,
+      signIn,
+      signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
  

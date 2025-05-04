@@ -1,126 +1,121 @@
-import  { useEffect, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
-import { ConnectionProvider } from './contexts/ConnectionContext';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LoginForm } from './components/auth/LoginForm';
+import { testSupabaseAccess } from './lib/supabase';
+import { useState } from 'react';
 
-// Layouts
-import AdminLayout from './layouts/AdminLayout';
-import SchoolLayout from './layouts/SchoolLayout';
-import AuthLayout from './layouts/AuthLayout';
+// Protected Route Component
+function ProtectedRoute({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) {
+  const { user, isAdmin, loading } = useAuth();
 
-// Admin Pages
-import AdminDashboard from './pages/admin/Dashboard';
-import Schools from './pages/admin/Schools';
-import Subscriptions from './pages/admin/Subscriptions';
-import Users from './pages/admin/Users';
-
-// School Pages
-import SchoolDashboard from './pages/school/Dashboard';
-import Students from './pages/school/Students';
-import Fees from './pages/school/Fees';
-import Payments from './pages/school/Payments';
-import Reports from './pages/school/Reports';
-import Settings from './pages/school/Settings';
-import Communication from './pages/school/Communication';
-
-// Auth Pages
-import Login from './pages/auth/Login';
-import ForgotPassword from './pages/auth/ForgotPassword';
-
-// Other
-import NotFound from './pages/NotFound';
-import { initDb } from './db';
-
-function App() {
-  const { user, loading } = useAuth();
-  const [dbInitialized, setDbInitialized] = useState(false);
-
-  useEffect(() => {
-    const init = async () => {
-      await initDb();
-      setDbInitialized(true);
-    };
-    init();
-  }, []);
-
-  if (loading || !dbInitialized) {
-    return (
-      <div className="flex w-full h-screen items-center justify-center flex-col space-y-3 p-2">
-        <span className="loader" />
-        <div className="text-base font-semibold text-gray-800">
-          جاري تحميل النظام...
-        </div>
-      </div>
-    );
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
+  if (!user) {
+    return <Navigate to={requireAdmin ? '/admin/login' : '/login'} />;
+  }
+
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/login" />;
+  }
+
+  return <>{children}</>;
+}
+
+// School Portal Dashboard
+function SchoolDashboard() {
+  return <div>School Dashboard</div>;
+}
+
+// Control Center Dashboard
+function AdminDashboard() {
+  const [testResult, setTestResult] = useState<{
+    anonKeyWorking: boolean;
+    serviceKeyWorking: boolean;
+    error?: any;
+  } | null>(null);
+
+  const runTest = async () => {
+    const result = await testSupabaseAccess();
+    setTestResult(result);
+  };
+
   return (
-    <Routes>
-      {/* Auth Routes */}
-      <Route path="/auth" element={<AuthLayout />}>
-        <Route path="login" element={<Login />} />
-        <Route path="forgot-password" element={<ForgotPassword />} />
-        <Route path="" element={<Navigate to="/auth/login" replace />} />
-      </Route>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
+      
+      <div className="mb-4">
+        <button
+          onClick={runTest}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Test Supabase Access
+        </button>
+      </div>
 
-      {/* Admin Routes */}
-      <Route
-        path="/admin"
-        element={
-          user && user.role === 'admin' ? (
-            <AdminLayout />
-          ) : (
-            <Navigate to="/auth/login" replace />
-          )
-        }
-      >
-        <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="schools" element={<Schools />} />
-        <Route path="subscriptions" element={<Subscriptions />} />
-        <Route path="users" element={<Users />} />
-        <Route path="" element={<Navigate to="/admin/dashboard" replace />} />
-      </Route>
+      {testResult && (
+        <div className="mt-4">
+          <h2 className="text-xl font-semibold mb-2">Test Results:</h2>
+          <div className="space-y-2">
+            <p>
+              Anon Key: 
+              <span className={testResult.anonKeyWorking ? 'text-green-500' : 'text-red-500'}>
+                {testResult.anonKeyWorking ? ' Working' : ' Not Working'}
+              </span>
+            </p>
+            <p>
+              Service Key: 
+              <span className={testResult.serviceKeyWorking ? 'text-green-500' : 'text-red-500'}>
+                {testResult.serviceKeyWorking ? ' Working' : ' Not Working'}
+              </span>
+            </p>
+            {testResult.error && (
+              <p className="text-red-500">
+                Error: {testResult.error.message}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
-      {/* School Routes */}
-      <Route
-        path="/school"
-        element={
-          user && (user.role === 'main-supervisor' || user.role === 'grade-supervisor') ? (
-            <SchoolLayout />
-          ) : (
-            <Navigate to="/auth/login" replace />
-          )
-        }
-      >
-        <Route path="dashboard" element={<SchoolDashboard />} />
-        <Route path="students" element={<Students />} />
-        <Route path="fees" element={<Fees />} />
-        <Route path="payments" element={<Payments />} />
-        <Route path="reports" element={<Reports />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="communication" element={<Communication />} />
-        <Route path="" element={<Navigate to="/school/dashboard" replace />} />
-      </Route>
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/admin/login" element={<LoginForm isAdminLogin />} />
 
-      {/* Root Route */}
-      <Route
-        path="/"
-        element={
-          user ? (
-            user.role === 'admin' ? (
-              <Navigate to="/admin/dashboard" replace />
-            ) : (
-              <Navigate to="/school/dashboard" replace />
-            )
-          ) : (
-            <Navigate to="/auth/login" replace />
-          )
-        }
-      />
+          {/* School Portal Routes */}
+          <Route
+            path="/school/dashboard"
+            element={
+              <ProtectedRoute>
+                <SchoolDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-      {/* 404 Route */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+          {/* Control Center Routes */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Redirect root to appropriate login */}
+          <Route path="/" element={<Navigate to="/login" />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
 }
 
