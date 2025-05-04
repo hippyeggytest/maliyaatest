@@ -8,22 +8,30 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+// Initialize the Supabase client with proper typing
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true
+  },
+  db: {
+    schema: 'public'
   }
 });
 
-export { supabase };
-
+// Test database connection
 export const testConnection = async () => {
   try {
-    const { data, error } = await supabase.from('schools').select('id').limit(1);
+    const { data, error } = await supabase
+      .from('schools')
+      .select('id')
+      .limit(1);
+    
     if (error) throw error;
     return { success: true, data };
   } catch (error: any) {
+    console.error('Connection test failed:', error);
     return { success: false, error };
   }
 };
@@ -37,7 +45,7 @@ export const handleSupabaseError = (error: any) => {
   };
 };
 
-// Helper function to check if user has admin access
+// Check if user has admin access
 export const isAdmin = async () => {
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -49,19 +57,19 @@ export const isAdmin = async () => {
   }
 };
 
-// Helper function to get current school ID
+// Get current school ID from user metadata
 export const getCurrentSchoolId = async () => {
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
-    return user?.user_metadata?.school_id;
+    return user?.user_metadata?.school_id || null;
   } catch (error) {
     console.error('Error getting school ID:', error);
     return null;
   }
 };
 
-// Type guard for Supabase error
+// Type guard for Supabase errors
 export const isSupabaseError = (error: any): error is { message: string } => {
   return error && typeof error.message === 'string';
 }; 
