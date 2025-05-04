@@ -1,14 +1,30 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
 
-// Supabase configuration with fallbacks
+// Supabase configuration with detailed logging
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY;
 
+console.log('Environment Variables:', {
+  hasUrl: !!supabaseUrl,
+  hasAnonKey: !!supabaseAnonKey,
+  hasServiceKey: !!supabaseServiceKey,
+  urlLength: supabaseUrl?.length,
+  anonKeyLength: supabaseAnonKey?.length,
+  serviceKeyLength: supabaseServiceKey?.length
+});
+
 // Validate configuration
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing required Supabase configuration. Please check your environment variables.');
+  const error = new Error('Missing required Supabase configuration');
+  console.error('Configuration Error:', {
+    message: error.message,
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey ? 'present' : 'missing',
+    serviceKey: supabaseServiceKey ? 'present' : 'missing'
+  });
+  throw error;
 }
 
 // Initialize Supabase clients with error handling
@@ -16,6 +32,8 @@ let supabase: ReturnType<typeof createClient<Database>>;
 let supabaseAdmin: ReturnType<typeof createClient<Database>>;
 
 try {
+  console.log('Initializing Supabase clients...');
+  
   supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
@@ -23,6 +41,8 @@ try {
       detectSessionInUrl: true
     }
   });
+
+  console.log('Regular client initialized successfully');
 
   if (supabaseServiceKey) {
     supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
@@ -32,6 +52,9 @@ try {
         detectSessionInUrl: true
       }
     });
+    console.log('Admin client initialized successfully');
+  } else {
+    console.warn('Service key not provided. Admin features will be limited.');
   }
 } catch (error) {
   console.error('Failed to initialize Supabase clients:', error);
@@ -41,7 +64,9 @@ try {
 // Helper function to get the appropriate client based on context
 export const getSupabaseClient = (isAdmin: boolean = false) => {
   if (isAdmin && !supabaseAdmin) {
-    throw new Error('Service role key not configured. Cannot use admin client.');
+    const error = new Error('Service role key not configured. Cannot use admin client.');
+    console.error('Admin Client Error:', error);
+    throw error;
   }
   return isAdmin ? supabaseAdmin : supabase;
 };
@@ -84,51 +109,24 @@ export const isSupabaseError = (error: any): error is { message: string } => {
   return error && typeof error.message === 'string';
 };
 
-// Test function to verify keys
-export const testSupabaseAccess = async () => {
+// Test function to verify connection
+export const testConnection = async () => {
   try {
-    // Test anon key access
-    const { data: anonData, error: anonError } = await supabase
-      .from('schools')
-      .select('*')
-      .limit(1);
+    console.log('Testing Supabase connection...');
+    const { data, error } = await supabase.from('schools').select('*').limit(1);
     
-    if (anonError) {
-      console.error('Anon key access test failed:', anonError);
-      return {
-        anonKeyWorking: false,
-        serviceKeyWorking: false,
-        error: anonError
-      };
+    if (error) {
+      console.error('Connection test failed:', error);
+      return { success: false, error };
     }
-
-    // Test service key access if available
-    if (supabaseAdmin) {
-      const { data: serviceData, error: serviceError } = await supabaseAdmin
-        .from('schools')
-        .select('*')
-        .limit(1);
-      
-      if (serviceError) {
-        console.error('Service key access test failed:', serviceError);
-        return {
-          anonKeyWorking: true,
-          serviceKeyWorking: false,
-          error: serviceError
-        };
-      }
-    }
-
-    return {
-      anonKeyWorking: true,
-      serviceKeyWorking: !!supabaseAdmin
-    };
+    
+    console.log('Connection test successful:', data);
+    return { success: true, data };
   } catch (error) {
-    console.error('Key test failed:', error);
-    return {
-      anonKeyWorking: false,
-      serviceKeyWorking: false,
-      error
-    };
+    console.error('Connection test error:', error);
+    return { success: false, error };
   }
-}; 
+};
+
+// Export the clients
+export { supabase, supabaseAdmin }; 
