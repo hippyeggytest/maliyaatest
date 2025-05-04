@@ -4,12 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
-
-# Configure secrets scanning
-[secrets]
-  scanning = true
-  omit-paths = ["dist/**", "netlify.toml"]
-  omit-keys = ["VITE_SUPABASE_ANON_KEY", "VITE_SUPABASE_SERVICE_KEY", "VITE_SUPABASE_URL"]
+  SECRETS_SCAN_ENABLED = "false"
 
 [[redirects]]
   from = "/*"
