@@ -1,7 +1,7 @@
 {
    "name": "نظام إدارة مالية المدارس",
-  "short_name": "SchoolFinance",
-  "description": "School Finance Management System",
+  "short_name": "نظام المالية",
+  "description": "نظام متكامل لإدارة الرسوم الدراسية والدفعات والتقارير المالية للمدارس",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -26,8 +26,11 @@
       "purpose": "maskable"
     }
   ],
+  "dir": "rtl",
+  "lang": "ar",
   "orientation": "portrait",
   "scope": "/",
-  "categories": ["education", "finance", "productivity"]
+  "categories": ["education", "finance", "productivity"],
+  "prefer_related_applications": false
 }
  

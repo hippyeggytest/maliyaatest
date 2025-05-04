@@ -62,15 +62,53 @@ self.addEventListener('message', (event) => {
   }
 });
 
-const bgSyncPlugin = new workbox.backgroundSync.BackgroundSyncPlugin('syncQueue', {
-  maxRetentionTime: 24 * 60 // Retry for up to 24 Hours (specified in minutes)
+const supabaseSyncPlugin = new workbox.backgroundSync.BackgroundSyncPlugin('supabaseSync', {
+  maxRetentionTime: 24 * 60, // Retry for up to 24 Hours
+  onSync: async ({ queue }) => {
+    let entry;
+    while (entry = await queue.shiftRequest()) {
+      try {
+        const response = await fetch(entry.request);
+        if (!response.ok) throw new Error('Network response was not ok');
+        console.log('Replay successful for request', entry.request.url);
+      } catch (error) {
+        console.error('Replay failed for request', entry.request.url, error);
+        await queue.unshiftRequest(entry);
+        throw error;
+      }
+    }
+  }
 });
 
 workbox.routing.registerRoute(
-  /\/api\/.*/,
+  /^https:\/\/[^\/]+\/rest\/v1\//,
   new workbox.strategies.NetworkOnly({
-    plugins: [bgSyncPlugin]
+    plugins: [supabaseSyncPlugin]
   }),
   'POST'
 );
+
+workbox.routing.registerRoute(
+  /^https:\/\/[^\/]+\/rest\/v1\//,
+  new workbox.strategies.NetworkFirst({
+    cacheName: 'supabase-data',
+    plugins: [
+      new workbox.cacheableResponse.CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new workbox.expiration.ExpirationPlugin({
+        maxAgeSeconds: 60 * 5, // 5 minutes
+      }),
+    ],
+  }),
+  'GET'
+);
+
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
+});
  

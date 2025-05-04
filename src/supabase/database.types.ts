@@ -13,61 +13,46 @@ export interface Database {
         Row: {
           id: number
           name: string
-          logo: string | null
-          status: 'active' | 'inactive'
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: number
           name: string
-          logo?: string | null
-          status?: 'active' | 'inactive'
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: number
           name?: string
-          logo?: string | null
-          status?: 'active' | 'inactive'
           created_at?: string
           updated_at?: string
         }
       }
       users: {
         Row: {
-          id: number
-          username: string
-          name: string
-          role: 'admin' | 'school_admin' | 'teacher' | 'student'
+          id: string
           email: string
-          school_id: number | null
-          grade: string | null
           created_at: string
           updated_at: string
+          is_admin: boolean
+          school_id: number | null
         }
         Insert: {
-          id?: number
-          username: string
-          name: string
-          role: 'admin' | 'school_admin' | 'teacher' | 'student'
+          id?: string
           email: string
-          school_id?: number | null
-          grade?: string | null
           created_at?: string
           updated_at?: string
+          is_admin?: boolean
+          school_id?: number | null
         }
         Update: {
-          id?: number
-          username?: string
-          name?: string
-          role?: 'admin' | 'school_admin' | 'teacher' | 'student'
+          id?: string
           email?: string
-          school_id?: number | null
-          grade?: string | null
           created_at?: string
           updated_at?: string
+          is_admin?: boolean
+          school_id?: number | null
         }
       }
       subscriptions: {

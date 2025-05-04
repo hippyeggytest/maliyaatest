@@ -1,21 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../supabase/database.types';
 
-// Supabase configuration with fallback values
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY?.trim() || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('Environment Variables:', {
-  hasUrl: !!supabaseUrl,
-  hasAnonKey: !!supabaseAnonKey,
-  hasServiceKey: !!supabaseServiceKey,
-  urlLength: supabaseUrl?.length,
-  anonKeyLength: supabaseAnonKey?.length,
-  serviceKeyLength: supabaseServiceKey?.length
-});
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
+}
 
-// Initialize single client instance
 const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -24,23 +16,16 @@ const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-// Initialize admin client only if service key is available
-const supabaseAdmin = supabaseServiceKey 
-  ? createClient<Database>(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-      }
-    })
-  : null;
+export { supabase };
 
-// Export the clients
-export { supabase, supabaseAdmin };
-
-// Helper function to get the appropriate client based on context
-export const getSupabaseClient = (isAdmin: boolean = false) => {
-  return isAdmin && supabaseAdmin ? supabaseAdmin : supabase;
+export const testConnection = async () => {
+  try {
+    const { data, error } = await supabase.from('schools').select('id').limit(1);
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error };
+  }
 };
 
 // Helper function to handle Supabase errors
@@ -79,20 +64,4 @@ export const getCurrentSchoolId = async () => {
 // Type guard for Supabase error
 export const isSupabaseError = (error: any): error is { message: string } => {
   return error && typeof error.message === 'string';
-};
-
-// Helper function to test Supabase connection
-export const testConnection = async () => {
-  try {
-    const { error } = await supabase.from('schools').select('id').limit(1);
-    return {
-      success: !error,
-      error: error ? handleSupabaseError(error) : null
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: handleSupabaseError(error)
-    };
-  }
 }; 

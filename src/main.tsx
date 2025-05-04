@@ -1,15 +1,19 @@
-import  { StrictMode } from 'react';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import App from './App';
-import './index.css';
-import { AppProvider } from './contexts/AppContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { AppProvider } from './contexts/AppContext';
 import { ConnectionProvider } from './contexts/ConnectionContext';
 import { initOfflineSync } from './utils/offlineSync';
+import App from './App';
+import './index.css';
 
 // Initialize offline/online sync
 initOfflineSync();
+
+// Set document direction and language
+document.documentElement.dir = 'rtl';
+document.documentElement.lang = 'ar';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

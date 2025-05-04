@@ -11,8 +11,8 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'نظام إدارة مالية المدارس',
-        short_name: 'SchoolFinance',
-        description: 'School Finance Management System',
+        short_name: 'نظام المالية',
+        description: 'نظام متكامل لإدارة الرسوم الدراسية والدفعات والتقارير المالية للمدارس',
         theme_color: '#800000',
         icons: [
           {
@@ -33,7 +33,10 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'maskable'
           }
-        ]
+        ],
+        dir: 'rtl',
+        lang: 'ar',
+        prefer_related_applications: false
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
@@ -59,6 +62,33 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': '/src',
+    },
+  },
+  build: {
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name) {
+            const info = assetInfo.name.split('.');
+            let extType = info[info.length - 1];
+            if (/\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/i.test(assetInfo.name)) {
+              extType = 'media';
+            } else if (/\.(png|jpe?g|gif|svg|bmp|webp)(\?.*)?$/i.test(assetInfo.name)) {
+              extType = 'img';
+            } else if (/\.(woff2?|eot|ttf|otf)(\?.*)?$/i.test(assetInfo.name)) {
+              extType = 'fonts';
+            }
+            return `assets/${extType}/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
+        },
+      },
+    },
+  },
+  server: {
+    headers: {
+      'Content-Type': 'text/css; charset=utf-8',
     },
   },
 });

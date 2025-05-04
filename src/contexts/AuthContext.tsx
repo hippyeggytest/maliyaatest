@@ -1,11 +1,9 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  user: User | null;
+  user: any;
   isAdmin: boolean;
-  schoolId: number | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -13,26 +11,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdminUser, setIsAdminUser] = useState(false);
-  const [schoolId, setSchoolId] = useState<number | null>(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and sets the user
+    // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setSchoolId(session?.user?.user_metadata?.school_id ?? null);
-      setIsAdminUser(session?.user?.user_metadata?.role === 'admin');
+      setIsAdmin(session?.user?.user_metadata?.isAdmin ?? false);
       setLoading(false);
     });
 
-    // Listen for changes on auth state
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setSchoolId(session?.user?.user_metadata?.school_id ?? null);
-      setIsAdminUser(session?.user?.user_metadata?.role === 'admin');
+      setIsAdmin(session?.user?.user_metadata?.isAdmin ?? false);
       setLoading(false);
     });
 
@@ -40,10 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
   };
 
@@ -52,25 +44,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
-  return (
-    <AuthContext.Provider value={{
-      user,
-      isAdmin: isAdminUser,
-      schoolId,
-      loading,
-      signIn,
-      signOut,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
+  const value = {
+    user,
+    isAdmin,
+    loading,
+    signIn,
+    signOut,
+  };
 
-export function useAuth() {
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};
  

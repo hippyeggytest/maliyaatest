@@ -1,54 +1,73 @@
-import  { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { School, AppContextType } from '../types';
-import { useAuth } from './AuthContext';
-import db from '../db';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useConnection } from './ConnectionContext';
 
-const AppContext = createContext<AppContextType>({
-  currentSchool: null,
-  setCurrentSchool: () => {},
-});
+interface AppContextType {
+  isOnline: boolean;
+  setIsOnline: (isOnline: boolean) => void;
+  syncStatus: 'idle' | 'syncing' | 'error';
+  setSyncStatus: (status: 'idle' | 'syncing' | 'error') => void;
+  pendingSyncs: number;
+  setPendingSyncs: (count: number) => void;
+}
 
-export const useApp = () => useContext(AppContext);
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [currentSchool, setCurrentSchool] = useState<School | null>(null);
-  const { user } = useAuth();
+  const [isOnline, setIsOnline] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
+  const [pendingSyncs, setPendingSyncs] = useState(0);
+  const { isConnected, syncNow } = useConnection();
 
   useEffect(() => {
-    const loadSchool = async () => {
-      if (user?.schoolId) {
-        try {
-          const school = await db.schools.get(user.schoolId);
-          if (school) {
-            setCurrentSchool(school);
-          }
-        } catch (error) {
-          console.error('Failed to load school data', error);
-        }
-      } else if (user?.role === 'admin') {
-        // For admin, we might want to load the first school or none
-        try {
-          const school = await db.schools.orderBy('id').first();
-          if (school) {
-            setCurrentSchool(school);
-          }
-        } catch (error) {
-          console.error('Failed to load any school data', error);
-        }
+    setIsOnline(isConnected);
+  }, [isConnected]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      if (pendingSyncs > 0) {
+        setSyncStatus('syncing');
+        syncNow()
+          .then(() => {
+            setSyncStatus('idle');
+            setPendingSyncs(0);
+          })
+          .catch(() => {
+            setSyncStatus('error');
+          });
       }
     };
 
-    if (user) {
-      loadSchool();
-    } else {
-      setCurrentSchool(null);
-    }
-  }, [user]);
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
 
-  return (
-    <AppContext.Provider value={{ currentSchool, setCurrentSchool }}>
-      {children}
-    </AppContext.Provider>
-  );
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [pendingSyncs, syncNow]);
+
+  const value = {
+    isOnline,
+    setIsOnline,
+    syncStatus,
+    setSyncStatus,
+    pendingSyncs,
+    setPendingSyncs,
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+};
+
+export const useApp = () => {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
 };
  
