@@ -2,15 +2,30 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
 
 // Supabase configuration
-const supabaseUrl = 'https://solezwaiwjujyokzfxue.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbGV6d2Fpd2p1anlva3pmeHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzNzA1NzMsImV4cCI6MjA2MTk0NjU3M30.wgePv_GApMCOSiZMwJLMO_oAQ7ABcp7bw5yxzZzrxsI';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbGV6d2Fpd2p1anlva3pmeHVlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjM3MDU3MywiZXhwIjoyMDYxOTQ2NTczfQ.JXMiVbevATiB6semZOeZ7s7tGy-5FIERFYfW_KOydQo';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://solezwaiwjujyokzfxue.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbGV6d2Fpd2p1anlva3pmeHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzNzA1NzMsImV4cCI6MjA2MTk0NjU3M30.wgePv_GApMCOSiZMwJLMO_oAQ7ABcp7bw5yxzZzrxsI';
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbGV6d2Fpd2p1anlva3pmeHVlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjM3MDU3MywiZXhwIjoyMDYxOTQ2NTczfQ.JXMiVbevATiB6semZOeZ7s7tGy-5FIERFYfW_KOydQo';
+
+// Validate configuration
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase configuration. Please check your environment variables.');
+}
 
 // Client for School Portal (uses anon key)
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
 
 // Client for Control Center (uses service key)
-export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey);
+export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
 
 // Helper function to get the appropriate client based on context
 export const getSupabaseClient = (isAdmin: boolean = false) => {
@@ -28,14 +43,24 @@ export const handleSupabaseError = (error: any) => {
 
 // Helper function to check if user has admin access
 export const isAdmin = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.user_metadata?.role === 'admin';
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.user_metadata?.role === 'admin';
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
 };
 
 // Helper function to get current school ID
 export const getCurrentSchoolId = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.user_metadata?.school_id;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.user_metadata?.school_id;
+  } catch (error) {
+    console.error('Error getting school ID:', error);
+    return null;
+  }
 };
 
 // Type guard for Supabase error
