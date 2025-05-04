@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   error: string | null;
+  isAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +35,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       schoolId: supabaseUser.user_metadata?.school_id || null,
       grade: supabaseUser.user_metadata?.grade || null,
     };
+  };
+
+  const isAdmin = () => {
+    return user?.role === 'admin';
   };
 
   useEffect(() => {
@@ -90,6 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     logout,
     error,
+    isAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
