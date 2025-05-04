@@ -48,7 +48,7 @@ export default defineConfig({
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                maxAgeSeconds: 60 * 60 * 24 * 365
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -65,27 +65,17 @@ export default defineConfig({
     },
   },
   build: {
-    assetsDir: 'assets',
     rollupOptions: {
+      external: ['@supabase/ssr'],
       output: {
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name) {
-            const info = assetInfo.name.split('.');
-            let extType = info[info.length - 1];
-            if (/\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/i.test(assetInfo.name)) {
-              extType = 'media';
-            } else if (/\.(png|jpe?g|gif|svg|bmp|webp)(\?.*)?$/i.test(assetInfo.name)) {
-              extType = 'img';
-            } else if (/\.(woff2?|eot|ttf|otf)(\?.*)?$/i.test(assetInfo.name)) {
-              extType = 'fonts';
-            }
-            return `assets/${extType}/[name]-[hash][extname]`;
-          }
-          return `assets/[name]-[hash][extname]`;
-        },
-      },
-      external: ['@supabase/supabase-js'],
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          supabase: ['@supabase/ssr', '@supabase/supabase-js']
+        }
+      }
     },
+    assetsDir: 'assets',
+    sourcemap: true
   },
   server: {
     headers: {
@@ -93,8 +83,8 @@ export default defineConfig({
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
-      'X-XSS-Protection': '1; mode=block',
-    },
+      'X-XSS-Protection': '1; mode=block'
+    }
   },
 });
  

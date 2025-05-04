@@ -1,51 +1,38 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
-import { AuthProvider } from './contexts/AuthContext';
-import { AppProvider } from './contexts/AppContext';
-import { ConnectionProvider } from './contexts/ConnectionContext';
-import { initOfflineSync } from './utils/offlineSync';
-import App from './App';
-import './index.css';
-
-// Initialize offline/online sync
-initOfflineSync();
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import App from './App'
+import { AuthProvider } from './contexts/AuthContext'
+import { AppProvider } from './contexts/AppContext'
+import { ConnectionProvider } from './contexts/ConnectionContext'
+import './index.css'
 
 // Set document direction and language
-document.documentElement.dir = 'rtl';
-document.documentElement.lang = 'ar';
+document.documentElement.dir = 'rtl'
+document.documentElement.lang = 'ar'
 
-// Create Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  },
-  db: {
-    schema: 'public'
-  }
-});
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <ConnectionProvider>
+// Error boundary for initialization
+try {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <AuthProvider>
           <AppProvider>
-            <App />
+            <ConnectionProvider>
+              <App />
+            </ConnectionProvider>
           </AppProvider>
-        </ConnectionProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  </StrictMode>
-);
+        </AuthProvider>
+      </BrowserRouter>
+    </React.StrictMode>
+  )
+} catch (error) {
+  console.error('Failed to initialize application:', error)
+  document.getElementById('root')!.innerHTML = `
+    <div style="text-align: center; padding: 20px; font-family: Tajawal, sans-serif;">
+      <h1>حدث خطأ في تحميل التطبيق</h1>
+      <p>يرجى تحديث الصفحة أو المحاولة مرة أخرى لاحقاً</p>
+    </div>
+  `
+}
  
