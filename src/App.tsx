@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginForm } from './components/auth/LoginForm';
-import { testSupabaseAccess } from './lib/supabase';
+import { testConnection } from './lib/supabase';
 import { useState } from 'react';
 
 // Protected Route Component
@@ -30,14 +30,10 @@ function SchoolDashboard() {
 
 // Control Center Dashboard
 function AdminDashboard() {
-  const [testResult, setTestResult] = useState<{
-    anonKeyWorking: boolean;
-    serviceKeyWorking: boolean;
-    error?: any;
-  } | null>(null);
+  const [testResult, setTestResult] = useState<{ success: boolean; data?: any; error?: any } | null>(null);
 
   const runTest = async () => {
-    const result = await testSupabaseAccess();
+    const result = await testConnection();
     setTestResult(result);
   };
 
@@ -60,14 +56,14 @@ function AdminDashboard() {
           <div className="space-y-2">
             <p>
               Anon Key: 
-              <span className={testResult.anonKeyWorking ? 'text-green-500' : 'text-red-500'}>
-                {testResult.anonKeyWorking ? ' Working' : ' Not Working'}
+              <span className={testResult.success ? 'text-green-500' : 'text-red-500'}>
+                {testResult.success ? ' Working' : ' Not Working'}
               </span>
             </p>
             <p>
               Service Key: 
-              <span className={testResult.serviceKeyWorking ? 'text-green-500' : 'text-red-500'}>
-                {testResult.serviceKeyWorking ? ' Working' : ' Not Working'}
+              <span className={testResult.success ? 'text-green-500' : 'text-red-500'}>
+                {testResult.success ? ' Working' : ' Not Working'}
               </span>
             </p>
             {testResult.error && (

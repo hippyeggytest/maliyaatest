@@ -4,7 +4,7 @@ import type { Database } from '../types/supabase';
 // Supabase configuration with detailed logging
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY;
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY?.trim();
 
 console.log('Environment Variables:', {
   hasUrl: !!supabaseUrl,
@@ -29,7 +29,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Initialize Supabase clients with error handling
 let supabase: ReturnType<typeof createClient<Database>>;
-let supabaseAdmin: ReturnType<typeof createClient<Database>>;
+let supabaseAdmin: ReturnType<typeof createClient<Database>> | null = null;
 
 try {
   console.log('Initializing Supabase clients...');
@@ -45,14 +45,19 @@ try {
   console.log('Regular client initialized successfully');
 
   if (supabaseServiceKey) {
-    supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-      }
-    });
-    console.log('Admin client initialized successfully');
+    try {
+      supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
+      console.log('Admin client initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize admin client:', error);
+      supabaseAdmin = null;
+    }
   } else {
     console.warn('Service key not provided. Admin features will be limited.');
   }
@@ -64,11 +69,10 @@ try {
 // Helper function to get the appropriate client based on context
 export const getSupabaseClient = (isAdmin: boolean = false) => {
   if (isAdmin && !supabaseAdmin) {
-    const error = new Error('Service role key not configured. Cannot use admin client.');
-    console.error('Admin Client Error:', error);
-    throw error;
+    console.warn('Admin client not available. Falling back to regular client.');
+    return supabase;
   }
-  return isAdmin ? supabaseAdmin : supabase;
+  return isAdmin ? supabaseAdmin! : supabase;
 };
 
 // Helper function to handle Supabase errors
