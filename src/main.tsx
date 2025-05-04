@@ -19,11 +19,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <AppProvider>
-          <ConnectionProvider>
+        <ConnectionProvider>
+          <AppProvider>
             <App />
-          </ConnectionProvider>
-        </AppProvider>
+          </AppProvider>
+        </ConnectionProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>
