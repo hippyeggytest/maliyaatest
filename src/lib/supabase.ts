@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
 
-// Supabase configuration with detailed logging
+// Supabase configuration
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY?.trim();
@@ -15,25 +15,15 @@ console.log('Environment Variables:', {
   serviceKeyLength: supabaseServiceKey?.length
 });
 
-// Validate configuration
-if (!supabaseUrl || !supabaseAnonKey) {
-  const error = new Error('Missing required Supabase configuration');
-  console.error('Configuration Error:', {
-    message: error.message,
-    url: supabaseUrl,
-    anonKey: supabaseAnonKey ? 'present' : 'missing',
-    serviceKey: supabaseServiceKey ? 'present' : 'missing'
-  });
-  throw error;
-}
-
-// Initialize Supabase clients with error handling
+// Initialize clients
 let supabase: ReturnType<typeof createClient<Database>>;
 let supabaseAdmin: ReturnType<typeof createClient<Database>> | null = null;
 
 try {
-  console.log('Initializing Supabase clients...');
-  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing required Supabase configuration');
+  }
+
   supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
@@ -42,24 +32,14 @@ try {
     }
   });
 
-  console.log('Regular client initialized successfully');
-
   if (supabaseServiceKey) {
-    try {
-      supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      });
-      console.log('Admin client initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize admin client:', error);
-      supabaseAdmin = null;
-    }
-  } else {
-    console.warn('Service key not provided. Admin features will be limited.');
+    supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
   }
 } catch (error) {
   console.error('Failed to initialize Supabase clients:', error);
