@@ -1,30 +1,34 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { User } from '@supabase/supabase-js';
 import { User as AppUser } from '../types';
 
-interface AuthContextType {
+// Define your environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Initialize Supabase client
+const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+
+// Define your context types
+type AuthContextType = {
+  session: any | null;
   user: AppUser | null;
+  signIn: (email: string, password: string) => Promise<any>;
+  signOut: () => Promise<void>;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
   error: string | null;
   isAdmin: () => boolean;
-}
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createBrowserClient(
-    import.meta.env.VITE_SUPABASE_URL,
-    import.meta.env.VITE_SUPABASE_ANON_KEY
-  );
-
-  const mapSupabaseUserToAppUser = (supabaseUser: User | null): AppUser | null => {
+  const mapSupabaseUserToAppUser = (supabaseUser: any | null): AppUser | null => {
     if (!supabaseUser) return null;
     return {
       id: parseInt(supabaseUser.id) || 0,
@@ -42,34 +46,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(mapSupabaseUserToAppUser(session.user));
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ? mapSupabaseUserToAppUser(currentSession.user) : null);
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
 
-    // Listen for changes on auth state (signed in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(mapSupabaseUserToAppUser(session.user));
-      } else {
-        setUser(null);
+    // Initial session check
+    const initSession = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
+        setUser(initialSession?.user ? mapSupabaseUserToAppUser(initialSession.user) : null);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    initSession();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
       setError(null);
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     } catch (err: any) {
       setError(err.message);
@@ -77,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = async () => {
+  const signOut = async () => {
     try {
       setError(null);
       const { error } = await supabase.auth.signOut();
@@ -90,16 +99,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const value = {
+    session,
     user,
+    signIn,
+    signOut,
     loading,
-    login,
-    logout,
     error,
     isAdmin,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
+}
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
