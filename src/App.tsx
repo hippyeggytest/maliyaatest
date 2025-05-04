@@ -1,6 +1,6 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LoginForm } from './components/auth/LoginForm';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
+import LoginForm from './components/auth/LoginForm';
 import { testConnection } from './lib/supabase';
 import { useState } from 'react';
 
@@ -28,7 +28,7 @@ function SchoolDashboard() {
   return <div>School Dashboard</div>;
 }
 
-// Control Center Dashboard
+// Admin Dashboard
 function AdminDashboard() {
   const [testResult, setTestResult] = useState<{ success: boolean; data?: any; error?: any } | null>(null);
 
@@ -80,38 +80,34 @@ function AdminDashboard() {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<LoginForm />} />
-          <Route path="/admin/login" element={<LoginForm isAdminLogin />} />
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={<LoginForm />} />
+      <Route path="/admin/login" element={<LoginForm isAdminLogin />} />
 
-          {/* School Portal Routes */}
-          <Route
-            path="/school/dashboard"
-            element={
-              <ProtectedRoute>
-                <SchoolDashboard />
-              </ProtectedRoute>
-            }
-          />
+      {/* School Portal Routes */}
+      <Route
+        path="/school/dashboard"
+        element={
+          <ProtectedRoute>
+            <SchoolDashboard />
+          </ProtectedRoute>
+        }
+      />
 
-          {/* Control Center Routes */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute requireAdmin>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
+      {/* Control Center Routes */}
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
 
-          {/* Redirect root to appropriate login */}
-          <Route path="/" element={<Navigate to="/login" />} />
-        </Routes>
-      </AuthProvider>
-    </Router>
+      {/* Redirect root to appropriate login */}
+      <Route path="/" element={<Navigate to="/login" />} />
+    </Routes>
   );
 }
 

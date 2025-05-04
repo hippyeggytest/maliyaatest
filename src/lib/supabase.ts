@@ -15,55 +15,31 @@ console.log('Environment Variables:', {
   serviceKeyLength: supabaseServiceKey?.length
 });
 
-// Initialize clients
-let supabase: ReturnType<typeof createClient<Database>> | null = null;
-let supabaseAdmin: ReturnType<typeof createClient<Database>> | null = null;
+// Initialize single client instance
+const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
-// Function to initialize Supabase clients
-const initializeSupabase = () => {
-  try {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing required Supabase configuration:', {
-        hasUrl: !!supabaseUrl,
-        hasAnonKey: !!supabaseAnonKey,
-        hasServiceKey: !!supabaseServiceKey
-      });
-      return;
-    }
-
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+// Initialize admin client only if service key is available
+const supabaseAdmin = supabaseServiceKey 
+  ? createClient<Database>(supabaseUrl, supabaseServiceKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true
       }
-    });
-
-    if (supabaseServiceKey) {
-      supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      });
-    }
-  } catch (error) {
-    console.error('Failed to initialize Supabase clients:', error);
-  }
-};
-
-// Initialize on module load
-initializeSupabase();
+    })
+  : null;
 
 // Export the clients
 export { supabase, supabaseAdmin };
 
 // Helper function to get the appropriate client based on context
 export const getSupabaseClient = (isAdmin: boolean = false) => {
-  if (!supabase) {
-    throw new Error('Supabase client not initialized. Check your environment variables.');
-  }
   return isAdmin && supabaseAdmin ? supabaseAdmin : supabase;
 };
 
@@ -79,8 +55,7 @@ export const handleSupabaseError = (error: any) => {
 // Helper function to check if user has admin access
 export const isAdmin = async () => {
   try {
-    const client = getSupabaseClient();
-    const { data: { user }, error } = await client.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
     return user?.user_metadata?.role === 'admin';
   } catch (error) {
@@ -92,8 +67,7 @@ export const isAdmin = async () => {
 // Helper function to get current school ID
 export const getCurrentSchoolId = async () => {
   try {
-    const client = getSupabaseClient();
-    const { data: { user }, error } = await client.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
     return user?.user_metadata?.school_id;
   } catch (error) {
@@ -107,15 +81,18 @@ export const isSupabaseError = (error: any): error is { message: string } => {
   return error && typeof error.message === 'string';
 };
 
-// Test function to verify connection
+// Helper function to test Supabase connection
 export const testConnection = async () => {
   try {
-    const client = getSupabaseClient();
-    const { data, error } = await client.from('schools').select('*').limit(1);
-    if (error) throw error;
-    return { success: true, data };
+    const { error } = await supabase.from('schools').select('id').limit(1);
+    return {
+      success: !error,
+      error: error ? handleSupabaseError(error) : null
+    };
   } catch (error) {
-    console.error('Connection test failed:', error);
-    return { success: false, error };
+    return {
+      success: false,
+      error: handleSupabaseError(error)
+    };
   }
 }; 

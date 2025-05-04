@@ -1,19 +1,19 @@
-import  { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
-import { Schools } from './Schools';
-import { Users } from './Users';
-import { Subscriptions } from './Subscriptions';
-import { Dashboard } from './Dashboard';
+import Schools from './Schools';
+import Users from './Users';
+import Subscriptions from './Subscriptions';
+import Dashboard from './Dashboard';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { supabase } from '../../supabase/supabaseClient';
-import { useSupabaseAuth } from '../../contexts/SupabaseAuthContext';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { Book, Home, School, Users as UsersIcon, CreditCard, LogOut } from 'lucide-react';
 
 const ControlCenter = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { user, logout } = useSupabaseAuth();
+  const { user, signOut } = useAuth();
   const [serverStatus, setServerStatus] = useState<'online' | 'offline'>('online');
 
   useEffect(() => {
@@ -38,7 +38,7 @@ const ControlCenter = () => {
     return <Navigate to="/login" />;
   }
 
-  if (user.role !== 'admin') {
+  if (user.user_metadata?.role !== 'admin') {
     return <Navigate to="/dashboard" />;
   }
 
@@ -64,11 +64,11 @@ const ControlCenter = () => {
             </div>
             
             <div className="text-sm">
-              {user.name} ({user.username})
+              {user.user_metadata?.full_name} ({user.email})
             </div>
             
             <button 
-              onClick={logout}
+              onClick={signOut}
               className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm flex items-center transition-colors"
             >
               <LogOut className="h-4 w-4 ml-1" />
