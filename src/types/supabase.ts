@@ -11,46 +11,61 @@ export interface Database {
     Tables: {
       schools: {
         Row: {
-          id: string
+          id: number
           name: string
+          logo: string | null
+          status: 'active' | 'inactive'
           created_at: string
           updated_at: string
         }
         Insert: {
-          id?: string
+          id?: number
           name: string
+          logo?: string | null
+          status?: 'active' | 'inactive'
           created_at?: string
           updated_at?: string
         }
         Update: {
-          id?: string
+          id?: number
           name?: string
+          logo?: string | null
+          status?: 'active' | 'inactive'
           created_at?: string
           updated_at?: string
         }
       }
       users: {
         Row: {
-          id: string
+          id: number
+          username: string
+          name: string
+          role: 'admin' | 'school_admin' | 'teacher' | 'student'
           email: string
-          role: string
-          school_id: string | null
+          school_id: number | null
+          grade: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
-          id?: string
+          id?: number
+          username: string
+          name: string
+          role: 'admin' | 'school_admin' | 'teacher' | 'student'
           email: string
-          role: string
-          school_id?: string | null
+          school_id?: number | null
+          grade?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
-          id?: string
+          id?: number
+          username?: string
+          name?: string
+          role?: 'admin' | 'school_admin' | 'teacher' | 'student'
           email?: string
-          role?: string
-          school_id?: string | null
+          school_id?: number | null
+          grade?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -59,29 +74,32 @@ export interface Database {
         Row: {
           id: number
           school_id: number
-          plan_type: string
-          status: string
+          plan: string
+          status: 'active' | 'inactive' | 'cancelled'
           start_date: string
-          end_date: string | null
+          end_date: string
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: number
           school_id: number
-          plan_type: string
-          status?: string
-          start_date?: string
-          end_date?: string | null
+          plan: string
+          status?: 'active' | 'inactive' | 'cancelled'
+          start_date: string
+          end_date: string
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: number
           school_id?: number
-          plan_type?: string
-          status?: string
+          plan?: string
+          status?: 'active' | 'inactive' | 'cancelled'
           start_date?: string
-          end_date?: string | null
+          end_date?: string
           created_at?: string
+          updated_at?: string
         }
       }
       fees: {

@@ -1,64 +1,63 @@
 //   Common types
 export interface User {
-  id?: number;
+  id: number;
   username: string;
-  password?: string;
   name: string;
-  role: 'admin' | 'main-supervisor' | 'grade-supervisor';
+  role: 'admin' | 'school_admin' | 'teacher' | 'student';
   email: string;
-  schoolId?: number;
-  grade?: string;
-  grades?: string[]; // For grade supervisors with multiple grades
+  schoolId: number | null;
+  grade: string | null;
 }
 
 export interface School {
-  id?: number;
+  id: number;
   name: string;
-  logo?: string;
-  address: string;
-  phone: string;
-  email: string;
-  status: 'active' | 'inactive' | 'pending';
-  subscriptionStart: string;
-  subscriptionEnd: string;
+  logo: string | null;
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
 }
 
-export interface Student {
-  id?: number;
-  name: string;
-  grade: string;
-  schoolId: number;
-  parentName: string;
-  parentPhone: string;
-  enrollmentDate: string;
-  useTransportation?: boolean;
-  transportationType?: 'none' | 'one-way' | 'two-way';
-  transportationFee?: number;
-  busRoute?: string;
+export interface Subscription {
+  id: number;
+  school_id: number;
+  plan: string;
+  status: 'active' | 'inactive' | 'cancelled';
+  start_date: string;
+  end_date: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Fee {
-  id?: number;
+  id: number;
+  school_id: number;
   name: string;
   amount: number;
-  dueDate: string;
-  grade: string;
-  schoolId: number;
-  installments: number;
-  description: string;
-  studentId?: number; // Optional, for student-specific fees
+  description: string | null;
+  created_at: string;
+}
+
+export interface Student {
+  id: number;
+  school_id: number;
+  name: string;
+  grade: string | null;
+  parent_name: string | null;
+  contact_number: string | null;
+  created_at: string;
 }
 
 export interface Payment {
-  id?: number;
+  id: number;
+  school_id: number;
+  student_id: number;
+  fee_id: number;
   amount: number;
-  date: string;
-  studentId: number;
-  feeId: number;
-  schoolId: number;
-  paymentMethod: string;
-  notes?: string;
-  installmentNumber?: number;
+  payment_date: string;
+  payment_method: string | null;
+  status: string;
+  created_at: string;
 }
 
 export interface Receipt {

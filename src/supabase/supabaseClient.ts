@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '../lib/supabase';
 import type { Database } from './database.types';
 
 // Initialize Supabase client
@@ -9,17 +9,11 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true
-  }
-});
-
 // Helper functions for working with Supabase
 export const fetchSchools = async () => {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('schools')
       .select('*')
       .order('name');
@@ -34,7 +28,8 @@ export const fetchSchools = async () => {
 
 export const fetchUsers = async () => {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('users')
       .select(`
         *,
@@ -54,7 +49,8 @@ export const fetchUsers = async () => {
 
 export const createSchool = async (schoolData: any) => {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('schools')
       .insert([schoolData])
       .select()
@@ -70,7 +66,8 @@ export const createSchool = async (schoolData: any) => {
 
 export const updateSchool = async (id: number, schoolData: any) => {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('schools')
       .update(schoolData)
       .eq('id', id)
@@ -87,7 +84,8 @@ export const updateSchool = async (id: number, schoolData: any) => {
 
 export const deleteSchool = async (id: number) => {
   try {
-    const { error } = await supabase
+    const client = getSupabaseClient();
+    const { error } = await client
       .from('schools')
       .delete()
       .eq('id', id);
@@ -102,7 +100,8 @@ export const deleteSchool = async (id: number) => {
 
 export const createUser = async (userData: any) => {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('users')
       .insert([userData])
       .select()
@@ -118,7 +117,8 @@ export const createUser = async (userData: any) => {
 
 export const updateUser = async (id: number, userData: any) => {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('users')
       .update(userData)
       .eq('id', id)
@@ -135,7 +135,8 @@ export const updateUser = async (id: number, userData: any) => {
 
 export const deleteUser = async (id: number) => {
   try {
-    const { error } = await supabase
+    const client = getSupabaseClient();
+    const { error } = await client
       .from('users')
       .delete()
       .eq('id', id);
@@ -150,7 +151,8 @@ export const deleteUser = async (id: number) => {
 
 export const fetchSubscriptions = async () => {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('subscriptions')
       .select(`
         *,
@@ -171,7 +173,8 @@ export const fetchSubscriptions = async () => {
 
 export const createSubscription = async (subscriptionData: any) => {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('subscriptions')
       .insert([subscriptionData])
       .select()
@@ -187,7 +190,8 @@ export const createSubscription = async (subscriptionData: any) => {
 
 export const updateSubscription = async (id: number, subscriptionData: any) => {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('subscriptions')
       .update(subscriptionData)
       .eq('id', id)
@@ -204,7 +208,8 @@ export const updateSubscription = async (id: number, subscriptionData: any) => {
 
 export const updateSchoolStatus = async (id: number, status: string) => {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('schools')
       .update({ status })
       .eq('id', id)

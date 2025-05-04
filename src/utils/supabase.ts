@@ -1,26 +1,23 @@
-import  { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '../lib/supabase';
+import type { Database } from '../supabase/database.types';
 
-// Create a Supabase client configured to work in offline mode
-const supabaseUrl = 'https://your-supabase-url.supabase.co';
-const supabaseAnonKey = 'your-supabase-anon-key';
+type TableName = keyof Database['public']['Tables'];
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  }
-});
+interface Filter {
+  column: string;
+  operator: string;
+  value: any;
+}
 
 // Function to sync local data with Supabase when back online
-export const syncToSupabase = async (entity: string, data: any, operation: 'insert' | 'update' | 'delete') => {
+export const syncToSupabase = async <T extends TableName>(
+  entity: T,
+  data: Database['public']['Tables'][T]['Insert'],
+  operation: 'insert' | 'update' | 'delete'
+) => {
   try {
-    const { data: result, error } = await supabase
+    const client = getSupabaseClient();
+    const { data: result, error } = await client
       .from(entity)
       [operation === 'delete' ? 'delete' : operation === 'update' ? 'update' : 'insert'](
         operation === 'delete' ? { id: data.id } : data
@@ -28,7 +25,7 @@ export const syncToSupabase = async (entity: string, data: any, operation: 'inse
       .select();
 
     if (error) throw error;
-    return result;
+    return result as unknown as Database['public']['Tables'][T]['Row'][];
   } catch (error) {
     console.error(`Error syncing ${entity} to Supabase:`, error);
     throw error;
@@ -36,9 +33,18 @@ export const syncToSupabase = async (entity: string, data: any, operation: 'inse
 };
 
 // Function to fetch data from Supabase
-export const fetchFromSupabase = async (entity: string, query?: any) => {
+export const fetchFromSupabase = async <T extends TableName>(
+  entity: T,
+  query?: {
+    select?: string;
+    filters?: Filter[];
+    orderBy?: { column: string; ascending?: boolean };
+    limit?: number;
+  }
+) => {
   try {
-    let queryBuilder = supabase.from(entity).select('*');
+    const client = getSupabaseClient();
+    let queryBuilder = client.from(entity).select(query?.select || '*');
     
     if (query?.filters) {
       for (const filter of query.filters) {
@@ -59,7 +65,7 @@ export const fetchFromSupabase = async (entity: string, query?: any) => {
     const { data, error } = await queryBuilder;
     
     if (error) throw error;
-    return data;
+    return data as unknown as Database['public']['Tables'][T]['Row'][];
   } catch (error) {
     console.error(`Error fetching ${entity} from Supabase:`, error);
     throw error;

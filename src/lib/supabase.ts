@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '../types/supabase';
+import type { Database } from '../supabase/database.types';
 
 // Supabase configuration with fallback values
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -55,6 +55,9 @@ const initializeSupabase = () => {
 
 // Initialize on module load
 initializeSupabase();
+
+// Export the clients
+export { supabase, supabaseAdmin };
 
 // Helper function to get the appropriate client based on context
 export const getSupabaseClient = (isAdmin: boolean = false) => {
@@ -115,7 +118,4 @@ export const testConnection = async () => {
     console.error('Connection test failed:', error);
     return { success: false, error };
   }
-};
-
-// Export the clients
-export { supabase, supabaseAdmin }; 
+}; 

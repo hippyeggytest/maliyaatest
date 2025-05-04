@@ -1,139 +1,106 @@
-import  { useState } from 'react';
-import { supabase } from '../supabase/supabaseClient';
-import { toast } from 'react-toastify';
+import { getSupabaseClient } from '../lib/supabase';
+import type { Database } from '../types/supabase';
 
-export function useSupabase<T>(tableName: string) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  
-  const fetchAll = async (options?: { select?: string; orderBy?: string; order?: 'asc' | 'desc' }) => {
-    setLoading(true);
-    setError(null);
-    
+export const useSupabase = () => {
+  const client = getSupabaseClient();
+
+  const fetch = async <T extends keyof Database['public']['Tables']>(
+    table: T,
+    query?: {
+      select?: string;
+      filters?: Record<string, any>;
+      orderBy?: { column: string; ascending?: boolean };
+      limit?: number;
+    }
+  ) => {
     try {
-      let query = supabase.from(tableName).select(options?.select || '*');
-      
-      if (options?.orderBy) {
-        query = query.order(options.orderBy, { ascending: options.order === 'asc' });
+      let queryBuilder = client.from(table).select(query?.select || '*');
+
+      if (query?.filters) {
+        for (const [key, value] of Object.entries(query.filters)) {
+          queryBuilder = queryBuilder.eq(key, value);
+        }
       }
-      
-      const { data, error } = await query;
-      
+
+      if (query?.orderBy) {
+        queryBuilder = queryBuilder.order(query.orderBy.column, {
+          ascending: query.orderBy.ascending ?? true,
+        });
+      }
+
+      if (query?.limit) {
+        queryBuilder = queryBuilder.limit(query.limit);
+      }
+
+      const { data, error } = await queryBuilder;
+
       if (error) throw error;
-      return data as T[];
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error occurred');
-      setError(error);
-      toast.error(`Failed to fetch data: ${error.message}`);
-      return [] as T[];
-    } finally {
-      setLoading(false);
+      return data;
+    } catch (error) {
+      console.error(`Error fetching from ${table}:`, error);
+      throw error;
     }
   };
-  
-  const fetchById = async (id: number) => {
-    setLoading(true);
-    setError(null);
-    
+
+  const create = async <T extends keyof Database['public']['Tables']>(
+    table: T,
+    data: Database['public']['Tables'][T]['Insert']
+  ) => {
     try {
-      const { data, error } = await supabase
-        .from(tableName)
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) throw error;
-      return data as T;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error occurred');
-      setError(error);
-      toast.error(`Failed to fetch item: ${error.message}`);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const create = async (item: Partial<T>) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error } = await supabase
-        .from(tableName)
-        .insert([item])
+      const { data: result, error } = await client
+        .from(table)
+        .insert(data)
         .select()
         .single();
-      
+
       if (error) throw error;
-      toast.success('Item created successfully');
-      return data as T;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error occurred');
-      setError(error);
-      toast.error(`Failed to create item: ${error.message}`);
-      return null;
-    } finally {
-      setLoading(false);
+      return result;
+    } catch (error) {
+      console.error(`Error creating in ${table}:`, error);
+      throw error;
     }
   };
-  
-  const update = async (id: number, item: Partial<T>) => {
-    setLoading(true);
-    setError(null);
-    
+
+  const update = async <T extends keyof Database['public']['Tables']>(
+    table: T,
+    id: number,
+    data: Partial<Database['public']['Tables'][T]['Update']>
+  ) => {
     try {
-      const { data, error } = await supabase
-        .from(tableName)
-        .update(item)
+      const { data: result, error } = await client
+        .from(table)
+        .update(data)
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
-      toast.success('Item updated successfully');
-      return data as T;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error occurred');
-      setError(error);
-      toast.error(`Failed to update item: ${error.message}`);
-      return null;
-    } finally {
-      setLoading(false);
+      return result;
+    } catch (error) {
+      console.error(`Error updating in ${table}:`, error);
+      throw error;
     }
   };
-  
-  const remove = async (id: number) => {
-    setLoading(true);
-    setError(null);
-    
+
+  const remove = async <T extends keyof Database['public']['Tables']>(
+    table: T,
+    id: number
+  ) => {
     try {
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await client.from(table).delete().eq('id', id);
       if (error) throw error;
-      toast.success('Item deleted successfully');
       return true;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error occurred');
-      setError(error);
-      toast.error(`Failed to delete item: ${error.message}`);
-      return false;
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error(`Error deleting from ${table}:`, error);
+      throw error;
     }
   };
-  
+
   return {
-    loading,
-    error,
-    fetchAll,
-    fetchById,
+    fetch,
     create,
     update,
     remove,
   };
-}
+};
  
