@@ -11,51 +11,48 @@ export interface Database {
     Tables: {
       schools: {
         Row: {
-          id: number
+          id: string
           name: string
-          logo: string | null
-          status: string
           created_at: string
+          updated_at: string
         }
         Insert: {
-          id?: number
+          id?: string
           name: string
-          logo?: string | null
-          status?: string
           created_at?: string
+          updated_at?: string
         }
         Update: {
-          id?: number
+          id?: string
           name?: string
-          logo?: string | null
-          status?: string
           created_at?: string
+          updated_at?: string
         }
       }
       users: {
         Row: {
-          id: number
-          name: string
+          id: string
           email: string
-          school_id: number | null
           role: string
+          school_id: string | null
           created_at: string
+          updated_at: string
         }
         Insert: {
-          id?: number
-          name: string
+          id?: string
           email: string
-          school_id?: number | null
-          role?: string
+          role: string
+          school_id?: string | null
           created_at?: string
+          updated_at?: string
         }
         Update: {
-          id?: number
-          name?: string
+          id?: string
           email?: string
-          school_id?: number | null
           role?: string
+          school_id?: string | null
           created_at?: string
+          updated_at?: string
         }
       }
       subscriptions: {

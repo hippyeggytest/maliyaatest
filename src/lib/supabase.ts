@@ -1,34 +1,48 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
 
-// Supabase configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://solezwaiwjujyokzfxue.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbGV6d2Fpd2p1anlva3pmeHVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzNzA1NzMsImV4cCI6MjA2MTk0NjU3M30.wgePv_GApMCOSiZMwJLMO_oAQ7ABcp7bw5yxzZzrxsI';
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbGV6d2Fpd2p1anlva3pmeHVlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjM3MDU3MywiZXhwIjoyMDYxOTQ2NTczfQ.JXMiVbevATiB6semZOeZ7s7tGy-5FIERFYfW_KOydQo';
+// Supabase configuration with fallbacks
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY;
 
 // Validate configuration
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase configuration. Please check your environment variables.');
+  throw new Error('Missing required Supabase configuration. Please check your environment variables.');
 }
 
-// Client for School Portal (uses anon key)
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+// Initialize Supabase clients with error handling
+let supabase: ReturnType<typeof createClient<Database>>;
+let supabaseAdmin: ReturnType<typeof createClient<Database>>;
 
-// Client for Control Center (uses service key)
-export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+try {
+  supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
+
+  if (supabaseServiceKey) {
+    supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
+  }
+} catch (error) {
+  console.error('Failed to initialize Supabase clients:', error);
+  throw error;
+}
 
 // Helper function to get the appropriate client based on context
 export const getSupabaseClient = (isAdmin: boolean = false) => {
+  if (isAdmin && !supabaseAdmin) {
+    throw new Error('Service role key not configured. Cannot use admin client.');
+  }
   return isAdmin ? supabaseAdmin : supabase;
 };
 
@@ -44,7 +58,8 @@ export const handleSupabaseError = (error: any) => {
 // Helper function to check if user has admin access
 export const isAdmin = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
     return user?.user_metadata?.role === 'admin';
   } catch (error) {
     console.error('Error checking admin status:', error);
@@ -55,7 +70,8 @@ export const isAdmin = async () => {
 // Helper function to get current school ID
 export const getCurrentSchoolId = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
     return user?.user_metadata?.school_id;
   } catch (error) {
     console.error('Error getting school ID:', error);
@@ -71,31 +87,41 @@ export const isSupabaseError = (error: any): error is { message: string } => {
 // Test function to verify keys
 export const testSupabaseAccess = async () => {
   try {
-    // Test anon key access (should be restricted)
+    // Test anon key access
     const { data: anonData, error: anonError } = await supabase
       .from('schools')
       .select('*')
       .limit(1);
     
     if (anonError) {
-      console.log('Anon key access test passed (expected restricted access)');
+      console.error('Anon key access test failed:', anonError);
+      return {
+        anonKeyWorking: false,
+        serviceKeyWorking: false,
+        error: anonError
+      };
     }
 
-    // Test service key access (should have full access)
-    const { data: serviceData, error: serviceError } = await supabaseAdmin
-      .from('schools')
-      .select('*')
-      .limit(1);
-    
-    if (!serviceError && serviceData) {
-      console.log('Service key access test passed (has full access)');
-    } else {
-      throw new Error('Service key does not have proper access');
+    // Test service key access if available
+    if (supabaseAdmin) {
+      const { data: serviceData, error: serviceError } = await supabaseAdmin
+        .from('schools')
+        .select('*')
+        .limit(1);
+      
+      if (serviceError) {
+        console.error('Service key access test failed:', serviceError);
+        return {
+          anonKeyWorking: true,
+          serviceKeyWorking: false,
+          error: serviceError
+        };
+      }
     }
 
     return {
       anonKeyWorking: true,
-      serviceKeyWorking: true
+      serviceKeyWorking: !!supabaseAdmin
     };
   } catch (error) {
     console.error('Key test failed:', error);
