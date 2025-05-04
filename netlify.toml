@@ -4,10 +4,14 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  VITE_SUPABASE_URL = "https://your-project-url.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "your-anon-key"
+  VITE_SUPABASE_SERVICE_KEY = "your-service-key"
 
 # Configure secrets scanning
 [secrets]
   scanning = true
+  omit-paths = ["dist/**"]
   omit-keys = ["VITE_SUPABASE_ANON_KEY", "VITE_SUPABASE_SERVICE_KEY", "VITE_SUPABASE_URL"]
 
 [[redirects]]
