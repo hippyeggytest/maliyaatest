@@ -12,7 +12,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.Re
   }
 
   if (requireAdmin && !isAdmin()) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/school/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -23,14 +23,66 @@ const App = () => {
     <div className="min-h-screen bg-gray-50 font-tajawal">
       <Routes>
         <Route path="/login" element={<LoginForm />} />
+        
+        {/* School Portal Routes */}
         <Route
-          path="/dashboard"
+          path="/school/dashboard"
           element={
             <ProtectedRoute>
               <SchoolDashboard />
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/school/students"
+          element={
+            <ProtectedRoute>
+              <SchoolDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/fees"
+          element={
+            <ProtectedRoute>
+              <SchoolDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/payments"
+          element={
+            <ProtectedRoute>
+              <SchoolDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/reports"
+          element={
+            <ProtectedRoute>
+              <SchoolDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/communication"
+          element={
+            <ProtectedRoute>
+              <SchoolDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/settings"
+          element={
+            <ProtectedRoute>
+              <SchoolDashboard />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Control Center Routes */}
         <Route
           path="/admin"
           element={
@@ -39,6 +91,8 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        
+        {/* Default Route */}
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </div>
