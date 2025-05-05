@@ -14,7 +14,7 @@ export const useSupabase = () => {
     }
   ) => {
     try {
-      let queryBuilder = client.from(table).select(query?.select || '*');
+      let queryBuilder = client.from(table as string).select(query?.select || '*');
 
       if (query?.filters) {
         for (const [key, value] of Object.entries(query.filters)) {
@@ -37,7 +37,7 @@ export const useSupabase = () => {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error(`Error fetching from ${table}:`, error);
+      console.error(`Error fetching from ${String(table)}:`, error);
       throw error;
     }
   };
@@ -48,7 +48,7 @@ export const useSupabase = () => {
   ) => {
     try {
       const { data: result, error } = await client
-        .from(table)
+        .from(table as string)
         .insert(data)
         .select()
         .single();
@@ -56,7 +56,7 @@ export const useSupabase = () => {
       if (error) throw error;
       return result;
     } catch (error) {
-      console.error(`Error creating in ${table}:`, error);
+      console.error(`Error creating in ${String(table)}:`, error);
       throw error;
     }
   };
@@ -68,7 +68,7 @@ export const useSupabase = () => {
   ) => {
     try {
       const { data: result, error } = await client
-        .from(table)
+        .from(table as string)
         .update(data)
         .eq('id', id)
         .select()
@@ -77,7 +77,7 @@ export const useSupabase = () => {
       if (error) throw error;
       return result;
     } catch (error) {
-      console.error(`Error updating in ${table}:`, error);
+      console.error(`Error updating in ${String(table)}:`, error);
       throw error;
     }
   };
@@ -87,11 +87,11 @@ export const useSupabase = () => {
     id: number
   ) => {
     try {
-      const { error } = await client.from(table).delete().eq('id', id);
+      const { error } = await client.from(table as string).delete().eq('id', id);
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error(`Error deleting from ${table}:`, error);
+      console.error(`Error deleting from ${String(table)}:`, error);
       throw error;
     }
   };
@@ -100,7 +100,7 @@ export const useSupabase = () => {
     fetch,
     create,
     update,
-    remove,
+    remove
   };
 };
  
