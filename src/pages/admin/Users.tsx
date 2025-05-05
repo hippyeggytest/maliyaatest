@@ -19,12 +19,13 @@ import { formatGradeToArabic } from '../../utils/gradeFormatters';
 type User = {
   id: number;
   username: string;
-  password: string;
   name: string;
-  role: 'admin' | 'main-supervisor' | 'grade-supervisor';
+  role: 'admin' | 'school_admin' | 'teacher' | 'student';
   email: string;
   school_id: number | null;
   grade: string | null;
+  created_at?: string;
+  updated_at?: string;
   schools?: {
     name: string;
   };
@@ -36,31 +37,29 @@ type School = {
   status: string;
 };
 
+type UserFormData = {
+  id?: number;
+  username: string;
+  name: string;
+  role: 'admin' | 'school_admin' | 'teacher' | 'student';
+  email: string;
+  school_id: number | null;
+  grade: string | null;
+  password?: string;
+};
+
 const Users = () => {
-  const { 
-    loading: usersLoading, 
-    error: usersError, 
-    fetchAll: fetchAllUsers, 
-    create: createUser, 
-    update: updateUser, 
-    remove: removeUser 
-  } = useSupabase<User>('users');
-  
-  const {
-    loading: schoolsLoading,
-    fetchAll: fetchAllSchools
-  } = useSupabase<School>('schools');
+  const supabase = useSupabase();
   
   const [users, setUsers] = useState<User[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [confirmResetPassword, setConfirmResetPassword] = useState<number | null>(null);
-  const [formData, setFormData] = useState<Partial<User>>({
+  const [formData, setFormData] = useState<UserFormData>({
     username: '',
-    password: '',
     name: '',
-    role: 'main-supervisor',
+    role: 'school_admin',
     email: '',
     school_id: null,
     grade: null
@@ -68,6 +67,8 @@ const Users = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
   const [groupedUsers, setGroupedUsers] = useState<{[key: string]: User[]}>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -91,14 +92,30 @@ const Users = () => {
   }, [users, schools]);
 
   const loadData = async () => {
-    const userData = await fetchAllUsers({ 
-      select: `*, schools:school_id (name)`,
-      orderBy: 'name' 
-    });
-    setUsers(userData);
-    
-    const schoolsData = await fetchAllSchools({ orderBy: 'name' });
-    setSchools(schoolsData);
+    try {
+      setLoading(true);
+      const userData = await supabase.fetch('users', { 
+        select: `*, schools:school_id (name)`,
+        orderBy: { column: 'name', ascending: true }
+      });
+      
+      if (userData && Array.isArray(userData)) {
+        setUsers(userData as unknown as User[]);
+      }
+      
+      const schoolsData = await supabase.fetch('schools', { 
+        orderBy: { column: 'name', ascending: true }
+      });
+      
+      if (schoolsData && Array.isArray(schoolsData)) {
+        setSchools(schoolsData as unknown as School[]);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -124,38 +141,48 @@ const Users = () => {
     e.preventDefault();
     
     try {
+      setLoading(true);
+      setError(null);
+      
       // Handle multiple grades for grade supervisors
       const updatedData = { ...formData };
-      if (formData.role === 'grade-supervisor' && selectedGrades.length > 0) {
+      if (formData.role === 'teacher' && selectedGrades.length > 0) {
         updatedData.grade = selectedGrades.join(',');
       }
       
       if (isEditing && formData.id) {
-        const updated = await updateUser(formData.id, updatedData);
-        if (updated) {
-          loadData();
-          setShowForm(false);
-          resetForm();
+        const { id, password, ...dataToUpdate } = updatedData;
+        // Ensure id is defined before calling update
+        if (id) {
+          const updated = await supabase.update('users', id, dataToUpdate);
+          if (updated) {
+            await loadData();
+            setShowForm(false);
+            resetForm();
+          }
         }
       } else {
-        const created = await createUser(updatedData);
+        const { id, password, ...dataToCreate } = updatedData;
+        const created = await supabase.create('users', dataToCreate);
         if (created) {
-          loadData();
+          await loadData();
           setShowForm(false);
           resetForm();
         }
       }
     } catch (error) {
       console.error('Error saving user:', error);
+      setError('Failed to save user');
+    } finally {
+      setLoading(false);
     }
   };
   
   const resetForm = () => {
     setFormData({
       username: '',
-      password: '',
       name: '',
-      role: 'main-supervisor',
+      role: 'school_admin',
       email: '',
       school_id: null,
       grade: null
@@ -165,14 +192,15 @@ const Users = () => {
   };
 
   const handleEdit = (user: User) => {
-    // Don't include password in the form for editing
-    const { password, ...userWithoutPassword } = user;
-    
-    // Handle multiple grades
-    const grades = user.grade ? user.grade.split(',').map(g => g.trim()) : [];
-    setSelectedGrades(grades);
-    
-    setFormData({ ...userWithoutPassword, password: '' });
+    setFormData({
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: user.role,
+      email: user.email,
+      school_id: user.school_id,
+      grade: user.grade
+    });
     setIsEditing(true);
     setShowForm(true);
   };
@@ -183,11 +211,19 @@ const Users = () => {
   
   const confirmDeleteUser = async () => {
     if (confirmDelete) {
-      const deleted = await removeUser(confirmDelete);
-      if (deleted) {
-        loadData();
+      try {
+        setLoading(true);
+        const deleted = await supabase.remove('users', confirmDelete);
+        if (deleted) {
+          await loadData();
+        }
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        setError('Failed to delete user');
+      } finally {
+        setLoading(false);
+        setConfirmDelete(null);
       }
-      setConfirmDelete(null);
     }
   };
   
@@ -197,13 +233,23 @@ const Users = () => {
   
   const confirmResetUserPassword = async () => {
     if (confirmResetPassword) {
-      const updated = await updateUser(confirmResetPassword, { 
-        password: 'password123' // In a real app, this would be a secure password
-      });
-      if (updated) {
-        loadData();
+      try {
+        setLoading(true);
+        // Use any type to bypass type checking for password field
+        const dataToUpdate = {
+          password: '123456' // Default password
+        } as any;
+        const updated = await supabase.update('users', confirmResetPassword, dataToUpdate);
+        if (updated) {
+          await loadData();
+        }
+      } catch (error) {
+        console.error('Error resetting password:', error);
+        setError('Failed to reset password');
+      } finally {
+        setLoading(false);
+        setConfirmResetPassword(null);
       }
-      setConfirmResetPassword(null);
     }
   };
 
@@ -236,7 +282,7 @@ const Users = () => {
     'الصف الثاني عشر'
   ];
 
-  if ((usersLoading || schoolsLoading) && users.length === 0) {
+  if ((loading || loading) && users.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-700"></div>
@@ -271,9 +317,9 @@ const Users = () => {
         </Button>
       </div>
 
-      {usersError && (
+      {error && (
         <div className="mb-4 bg-red-50 text-red-800 p-4 rounded-md border border-red-200">
-          حدث خطأ: {usersError.message}
+          حدث خطأ: {error}
         </div>
       )}
 
@@ -336,24 +382,6 @@ const Users = () => {
               </div>
 
               <div className="sm:col-span-3">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  كلمة المرور
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="password"
-                    name="password"
-                    id="password"
-                    required={!isEditing}
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="form-input block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                    placeholder={isEditing ? 'اترك فارغًا للإبقاء على كلمة المرور الحالية' : ''}
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-3">
                 <label htmlFor="role" className="block text-sm font-medium text-gray-700">
                   الدور
                 </label>
@@ -366,8 +394,9 @@ const Users = () => {
                     className="form-input block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   >
                     <option value="admin">مدير النظام</option>
-                    <option value="main-supervisor">مشرف رئيسي</option>
-                    <option value="grade-supervisor">مشرف صفوف</option>
+                    <option value="school_admin">مدير مدرسة</option>
+                    <option value="teacher">معلم</option>
+                    <option value="student">طالب</option>
                   </select>
                 </div>
               </div>
@@ -393,7 +422,7 @@ const Users = () => {
                 </div>
               </div>
 
-              {formData.role === 'grade-supervisor' && (
+              {formData.role === 'teacher' && (
                 <div className="sm:col-span-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     الصفوف
@@ -532,15 +561,17 @@ const Users = () => {
                             <div className="flex items-center">
                               <span className="text-sm text-gray-500 ml-1">الدور:</span>
                               <span className={`px-2 py-0.5 rounded-full text-xs ${
-                                user.role === 'main-supervisor' 
+                                user.role === 'school_admin' 
                                   ? 'bg-blue-100 text-blue-800' 
-                                  : 'bg-purple-100 text-purple-800'
+                                  : user.role === 'teacher' 
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-gray-100 text-gray-800'
                               }`}>
-                                {user.role === 'main-supervisor' ? 'مشرف رئيسي' : 'مشرف صفوف'}
+                                {user.role === 'school_admin' ? 'مدير مدرسة' : user.role === 'teacher' ? 'معلم' : 'طالب'}
                               </span>
                             </div>
                           </div>
-                          {user.role === 'grade-supervisor' && user.grade && (
+                          {user.role === 'teacher' && user.grade && (
                             <div className="mt-1 flex flex-wrap gap-1">
                               {user.grade.split(',').map(grade => (
                                 <span key={grade} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
