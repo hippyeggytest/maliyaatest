@@ -44,14 +44,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = () => {
-    return session?.user?.user_metadata?.role === 'admin';
+    const role = session?.user?.user_metadata?.role;
+    console.log('Checking admin role:', role);
+    return role === 'admin';
   };
 
   const handleAuthRedirect = (userRole: string) => {
     console.log('Handling auth redirect for role:', userRole);
     if (userRole === 'admin') {
+      console.log('Redirecting admin to control center');
       navigate('/admin');
     } else {
+      console.log('Redirecting non-admin to school dashboard');
       navigate('/school/dashboard');
     }
   };
@@ -93,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Store user role in localStorage for debugging
       const role = data.session?.user?.user_metadata?.role;
+      console.log('User role after sign in:', role);
       localStorage.setItem('userRole', role || '');
 
       // Redirect based on role
