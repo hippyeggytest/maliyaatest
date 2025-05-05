@@ -17,10 +17,10 @@ ON schools
 FOR ALL
 TO authenticated
 USING (
-  auth.role() = 'admin'
+  auth.jwt() ->> 'role' = 'admin'
 )
 WITH CHECK (
-  auth.role() = 'admin'
+  auth.jwt() ->> 'role' = 'admin'
 );
 
 -- Allow authenticated users to create schools (needed for initial setup)
@@ -28,7 +28,10 @@ CREATE POLICY "Allow authenticated users to create schools"
 ON schools
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (
+  auth.jwt() ->> 'role' = 'admin' OR
+  auth.jwt() ->> 'role' = 'school_admin'
+);
 
 -- Allow school admins to read their own school
 CREATE POLICY "School admins can read their own school"
@@ -36,7 +39,7 @@ ON schools
 FOR SELECT
 TO authenticated
 USING (
-  auth.role() = 'school_admin' AND
+  auth.jwt() ->> 'role' = 'school_admin' AND
   id = (
     SELECT school_id::bigint 
     FROM users 
@@ -50,7 +53,7 @@ ON schools
 FOR UPDATE
 TO authenticated
 USING (
-  auth.role() = 'school_admin' AND
+  auth.jwt() ->> 'role' = 'school_admin' AND
   id = (
     SELECT school_id::bigint 
     FROM users 
@@ -58,7 +61,7 @@ USING (
   )
 )
 WITH CHECK (
-  auth.role() = 'school_admin' AND
+  auth.jwt() ->> 'role' = 'school_admin' AND
   id = (
     SELECT school_id::bigint 
     FROM users 
@@ -72,7 +75,7 @@ ON schools
 FOR SELECT
 TO authenticated
 USING (
-  auth.role() = 'teacher' AND
+  auth.jwt() ->> 'role' = 'teacher' AND
   id = (
     SELECT school_id::bigint 
     FROM users 
@@ -86,7 +89,7 @@ ON schools
 FOR SELECT
 TO authenticated
 USING (
-  auth.role() = 'student' AND
+  auth.jwt() ->> 'role' = 'student' AND
   id = (
     SELECT school_id::bigint 
     FROM users 
