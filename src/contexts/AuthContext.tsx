@@ -42,33 +42,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = () => {
-    return user?.role === 'admin';
+    return session?.user?.user_metadata?.role === 'admin';
   };
 
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ? mapSupabaseUserToAppUser(currentSession.user) : null);
+      async (event, session) => {
+        setSession(session);
+        setUser(session ? mapSupabaseUserToAppUser(session.user) : null);
         setLoading(false);
       }
     );
-
-    // Initial session check
-    const initSession = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        setSession(initialSession);
-        setUser(initialSession?.user ? mapSupabaseUserToAppUser(initialSession.user) : null);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initSession();
 
     return () => {
       subscription.unsubscribe();
@@ -77,40 +62,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      setError(null);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
       if (error) throw error;
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
+
+      setSession(data.session);
+      setUser(data.session ? mapSupabaseUserToAppUser(data.session.user) : null);
+      return data;
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
     }
   };
 
   const signOut = async () => {
     try {
-      setError(null);
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await supabase.auth.signOut();
+      setSession(null);
       setUser(null);
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
     }
   };
 
-  const value = {
-    session,
-    user,
-    signIn,
-    signOut,
-    loading,
-    error,
-    isAdmin,
-  };
-
   return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
+    <AuthContext.Provider
+      value={{
+        session,
+        user,
+        signIn,
+        signOut,
+        loading,
+        error,
+        isAdmin,
+      }}
+    >
+      {children}
     </AuthContext.Provider>
   );
 }
