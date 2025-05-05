@@ -8,6 +8,7 @@ interface ConnectionContextType {
   error: string | null;
   checkConnection: () => Promise<void>;
   syncNow: () => Promise<void>;
+  isInitialized: boolean;
 }
 
 const ConnectionContext = createContext<ConnectionContextType | undefined>(undefined);
@@ -16,6 +17,7 @@ export const ConnectionProvider = ({ children }: { children: ReactNode }) => {
   const [isConnected, setIsConnected] = useState(true);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const checkConnection = async () => {
     try {
@@ -27,6 +29,8 @@ export const ConnectionProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       setIsConnected(false);
       setError(err.message || 'فشل الاتصال بالخادم');
+    } finally {
+      setIsInitialized(true);
     }
   };
 
@@ -76,6 +80,7 @@ export const ConnectionProvider = ({ children }: { children: ReactNode }) => {
     error,
     checkConnection,
     syncNow,
+    isInitialized
   };
 
   return <ConnectionContext.Provider value={value}>{children}</ConnectionContext.Provider>;
@@ -83,8 +88,19 @@ export const ConnectionProvider = ({ children }: { children: ReactNode }) => {
 
 export const useConnection = () => {
   const context = useContext(ConnectionContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useConnection must be used within a ConnectionProvider');
+  }
+  if (!context.isInitialized) {
+    // Return a safe default state while initializing
+    return {
+      isConnected: false,
+      lastSync: null,
+      error: null,
+      checkConnection: async () => {},
+      syncNow: async () => {},
+      isInitialized: false
+    };
   }
   return context;
 };
