@@ -20,6 +20,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   }
 });
 
+// Export a function to get the Supabase client
+export const getSupabaseClient = () => supabase;
+
 // Test database connection
 export const testConnection = async () => {
   try {
@@ -48,8 +51,7 @@ export const handleSupabaseError = (error: any) => {
 // Check if user has admin access
 export const isAdmin = async () => {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) throw error;
+    const { data: { user } } = await supabase.auth.getUser();
     return user?.user_metadata?.role === 'admin';
   } catch (error) {
     console.error('Error checking admin status:', error);
@@ -60,8 +62,7 @@ export const isAdmin = async () => {
 // Get current school ID from user metadata
 export const getCurrentSchoolId = async () => {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) throw error;
+    const { data: { user } } = await supabase.auth.getUser();
     return user?.user_metadata?.school_id || null;
   } catch (error) {
     console.error('Error getting school ID:', error);
