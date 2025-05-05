@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useConnection } from './ConnectionContext';
 
 interface AppContextType {
   isOnline: boolean;
@@ -12,22 +11,16 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [isOnline, setIsOnline] = useState(true);
+interface AppProviderProps {
+  children: ReactNode;
+  isConnected?: boolean;
+  onSync?: () => Promise<void>;
+}
+
+export const AppProvider = ({ children, isConnected = true, onSync }: AppProviderProps) => {
+  const [isOnline, setIsOnline] = useState(isConnected);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
   const [pendingSyncs, setPendingSyncs] = useState(0);
-  
-  // Safely get connection context
-  let isConnected = true;
-  let syncNow = async () => {};
-  
-  try {
-    const connection = useConnection();
-    isConnected = connection.isConnected;
-    syncNow = connection.syncNow;
-  } catch (error) {
-    console.warn('ConnectionProvider not available:', error);
-  }
 
   useEffect(() => {
     setIsOnline(isConnected);
@@ -36,9 +29,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      if (pendingSyncs > 0) {
+      if (pendingSyncs > 0 && onSync) {
         setSyncStatus('syncing');
-        syncNow()
+        onSync()
           .then(() => {
             setSyncStatus('idle');
             setPendingSyncs(0);
@@ -60,7 +53,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [pendingSyncs, syncNow]);
+  }, [pendingSyncs, onSync]);
 
   const value = {
     isOnline,

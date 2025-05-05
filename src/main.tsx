@@ -5,11 +5,23 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import { AppProvider } from './contexts/AppContext'
 import { ConnectionProvider } from './contexts/ConnectionContext'
+import { useConnection } from './contexts/ConnectionContext'
 import './index.css'
 
 // Set document direction and language
 document.documentElement.dir = 'rtl'
 document.documentElement.lang = 'ar'
+
+// Wrapper component to connect ConnectionProvider with AppProvider
+const AppWithConnection = () => {
+  const { isConnected, syncNow } = useConnection();
+  
+  return (
+    <AppProvider isConnected={isConnected} onSync={syncNow}>
+      <App />
+    </AppProvider>
+  );
+};
 
 // Error boundary for initialization
 try {
@@ -18,9 +30,7 @@ try {
       <BrowserRouter>
         <ConnectionProvider>
           <AuthProvider>
-            <AppProvider>
-              <App />
-            </AppProvider>
+            <AppWithConnection />
           </AuthProvider>
         </ConnectionProvider>
       </BrowserRouter>
