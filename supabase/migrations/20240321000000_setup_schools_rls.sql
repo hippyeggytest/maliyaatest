@@ -31,8 +31,8 @@ WITH CHECK (
   )
 );
 
--- Allow authenticated users to create schools (needed for initial setup)
-CREATE POLICY "Allow authenticated users to create schools"
+-- Allow any authenticated user to create a school (needed for initial setup)
+CREATE POLICY "Allow any authenticated user to create a school"
 ON schools
 FOR INSERT
 TO authenticated

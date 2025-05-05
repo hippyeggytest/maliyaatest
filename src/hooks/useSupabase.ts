@@ -61,6 +61,11 @@ export const useSupabase = () => {
         throw new Error('Invalid data object');
       }
 
+      // Check if user is authenticated
+      const { data: { session }, error: authError } = await client.auth.getSession();
+      if (authError) throw authError;
+      if (!session) throw new Error('User must be authenticated to create a school');
+
       const { data: result, error } = await client
         .from(table)
         .insert(data)
