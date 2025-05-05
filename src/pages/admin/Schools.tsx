@@ -94,18 +94,21 @@ const Schools = () => {
       
       if (isEditing && formData.id) {
         const { id, ...dataToUpdate } = formData;
-        const updated = await supabase.update('schools', id, dataToUpdate);
+        const updated = await supabase.update('schools', id, {
+          name: dataToUpdate.name || '',
+          logo: dataToUpdate.logo,
+          status: dataToUpdate.status || 'active'
+        });
         if (updated) {
           await loadSchools();
           setShowForm(false);
           resetForm();
         }
       } else {
-        const { id, ...dataToCreate } = formData;
         const created = await supabase.create('schools', {
-          ...dataToCreate,
-          name: dataToCreate.name || '',
-          status: dataToCreate.status || 'active'
+          name: formData.name || '',
+          logo: formData.logo,
+          status: formData.status || 'active'
         });
         if (created) {
           await loadSchools();
