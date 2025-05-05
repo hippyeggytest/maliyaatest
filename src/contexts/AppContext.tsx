@@ -16,7 +16,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isOnline, setIsOnline] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
   const [pendingSyncs, setPendingSyncs] = useState(0);
-  const { isConnected, syncNow } = useConnection();
+  
+  // Safely get connection context
+  let isConnected = true;
+  let syncNow = async () => {};
+  
+  try {
+    const connection = useConnection();
+    isConnected = connection.isConnected;
+    syncNow = connection.syncNow;
+  } catch (error) {
+    console.warn('ConnectionProvider not available:', error);
+  }
 
   useEffect(() => {
     setIsOnline(isConnected);
@@ -57,7 +68,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     syncStatus,
     setSyncStatus,
     pendingSyncs,
-    setPendingSyncs,
+    setPendingSyncs
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -65,7 +76,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useApp must be used within an AppProvider');
   }
   return context;

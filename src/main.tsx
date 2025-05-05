@@ -16,13 +16,13 @@ try {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <BrowserRouter>
-        <AuthProvider>
-          <AppProvider>
-            <ConnectionProvider>
+        <ConnectionProvider>
+          <AuthProvider>
+            <AppProvider>
               <App />
-            </ConnectionProvider>
-          </AppProvider>
-        </AuthProvider>
+            </AppProvider>
+          </AuthProvider>
+        </ConnectionProvider>
       </BrowserRouter>
     </React.StrictMode>
   )
