@@ -15,6 +15,13 @@ WITH CHECK (
   auth.role() = 'admin'
 );
 
+-- Allow authenticated users to create schools (needed for initial setup)
+CREATE POLICY "Allow authenticated users to create schools"
+ON schools
+FOR INSERT
+TO authenticated
+WITH CHECK (true);
+
 -- Allow school admins to read their own school
 CREATE POLICY "School admins can read their own school"
 ON schools
