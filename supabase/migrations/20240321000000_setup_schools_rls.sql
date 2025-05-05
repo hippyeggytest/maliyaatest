@@ -17,12 +17,18 @@ ON schools
 FOR ALL
 TO authenticated
 USING (
-  auth.jwt() ->> 'role' = 'admin' OR
-  auth.jwt() ->> 'role' = 'school_admin'
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE id::text = auth.uid()::text
+    AND (role = 'admin' OR role = 'school_admin')
+  )
 )
 WITH CHECK (
-  auth.jwt() ->> 'role' = 'admin' OR
-  auth.jwt() ->> 'role' = 'school_admin'
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE id::text = auth.uid()::text
+    AND (role = 'admin' OR role = 'school_admin')
+  )
 );
 
 -- Allow authenticated users to create schools (needed for initial setup)
@@ -38,11 +44,11 @@ ON schools
 FOR SELECT
 TO authenticated
 USING (
-  (auth.jwt() ->> 'role' = 'school_admin' OR auth.jwt() ->> 'role' = 'admin') AND
-  id = (
-    SELECT school_id::bigint 
-    FROM users 
+  EXISTS (
+    SELECT 1 FROM users
     WHERE id::text = auth.uid()::text
+    AND (role = 'school_admin' OR role = 'admin')
+    AND school_id::bigint = schools.id
   )
 );
 
@@ -52,19 +58,19 @@ ON schools
 FOR UPDATE
 TO authenticated
 USING (
-  (auth.jwt() ->> 'role' = 'school_admin' OR auth.jwt() ->> 'role' = 'admin') AND
-  id = (
-    SELECT school_id::bigint 
-    FROM users 
+  EXISTS (
+    SELECT 1 FROM users
     WHERE id::text = auth.uid()::text
+    AND (role = 'school_admin' OR role = 'admin')
+    AND school_id::bigint = schools.id
   )
 )
 WITH CHECK (
-  (auth.jwt() ->> 'role' = 'school_admin' OR auth.jwt() ->> 'role' = 'admin') AND
-  id = (
-    SELECT school_id::bigint 
-    FROM users 
+  EXISTS (
+    SELECT 1 FROM users
     WHERE id::text = auth.uid()::text
+    AND (role = 'school_admin' OR role = 'admin')
+    AND school_id::bigint = schools.id
   )
 );
 
@@ -74,11 +80,11 @@ ON schools
 FOR SELECT
 TO authenticated
 USING (
-  (auth.jwt() ->> 'role' = 'teacher' OR auth.jwt() ->> 'role' = 'admin') AND
-  id = (
-    SELECT school_id::bigint 
-    FROM users 
+  EXISTS (
+    SELECT 1 FROM users
     WHERE id::text = auth.uid()::text
+    AND (role = 'teacher' OR role = 'admin')
+    AND school_id::bigint = schools.id
   )
 );
 
@@ -88,10 +94,10 @@ ON schools
 FOR SELECT
 TO authenticated
 USING (
-  (auth.jwt() ->> 'role' = 'student' OR auth.jwt() ->> 'role' = 'admin') AND
-  id = (
-    SELECT school_id::bigint 
-    FROM users 
+  EXISTS (
+    SELECT 1 FROM users
     WHERE id::text = auth.uid()::text
+    AND (role = 'student' OR role = 'admin')
+    AND school_id::bigint = schools.id
   )
 ); 
