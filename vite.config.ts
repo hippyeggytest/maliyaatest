@@ -66,11 +66,10 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['@supabase/ssr'],
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          supabase: ['@supabase/ssr', '@supabase/supabase-js']
+          supabase: ['@supabase/supabase-js']
         }
       }
     },
