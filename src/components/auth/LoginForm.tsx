@@ -9,7 +9,7 @@ const LoginForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { signIn, isAdmin } = useAuth();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,12 +18,7 @@ const LoginForm = () => {
 
     try {
       await signIn(email, password);
-      // Redirect based on user role
-      if (isAdmin()) {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      // The signIn function in AuthContext will handle the redirection
     } catch (err: any) {
       setError(err.message || 'حدث خطأ أثناء تسجيل الدخول');
     } finally {

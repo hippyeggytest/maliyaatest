@@ -21,11 +21,12 @@ const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.Re
   }, [user, isAdmin, requireAdmin, location]);
 
   if (!user) {
+    console.log('No user found, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   if (requireAdmin && !isAdmin()) {
-    console.log('Redirecting non-admin user to school dashboard');
+    console.log('User is not admin, redirecting to school dashboard');
     return <Navigate to="/school/dashboard" replace />;
   }
 
@@ -121,6 +122,9 @@ const App = () => {
         
         {/* Default Route */}
         <Route path="/" element={<Navigate to="/login" replace />} />
+        
+        {/* Catch-all Route */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </div>
   );

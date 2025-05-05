@@ -47,10 +47,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return session?.user?.user_metadata?.role === 'admin';
   };
 
+  const handleAuthRedirect = (userRole: string) => {
+    console.log('Handling auth redirect for role:', userRole);
+    if (userRole === 'admin') {
+      navigate('/admin');
+    } else {
+      navigate('/school/dashboard');
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session);
         setSession(session);
         setUser(session ? mapSupabaseUserToAppUser(session.user) : null);
         setLoading(false);
@@ -58,11 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Handle initial redirect after login
         if (event === 'SIGNED_IN' && session?.user) {
           const role = session.user.user_metadata?.role;
-          if (role === 'admin') {
-            navigate('/admin');
-          } else {
-            navigate('/school/dashboard');
-          }
+          console.log('User signed in with role:', role);
+          handleAuthRedirect(role);
         }
       }
     );
@@ -85,15 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.session ? mapSupabaseUserToAppUser(data.session.user) : null);
 
       // Store user role in localStorage for debugging
-      localStorage.setItem('userRole', data.session?.user?.user_metadata?.role || '');
+      const role = data.session?.user?.user_metadata?.role;
+      localStorage.setItem('userRole', role || '');
 
       // Redirect based on role
-      const role = data.session?.user?.user_metadata?.role;
-      if (role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/school/dashboard');
-      }
+      handleAuthRedirect(role);
 
       return data;
     } catch (error: any) {
