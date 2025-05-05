@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { User as AppUser } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 // Define your environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const mapSupabaseUserToAppUser = (supabaseUser: any | null): AppUser | null => {
     if (!supabaseUser) return null;
@@ -52,13 +54,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session ? mapSupabaseUserToAppUser(session.user) : null);
         setLoading(false);
+
+        // Handle initial redirect after login
+        if (event === 'SIGNED_IN' && session?.user) {
+          const role = session.user.user_metadata?.role;
+          if (role === 'admin') {
+            navigate('/admin');
+          } else {
+            navigate('/school/dashboard');
+          }
+        }
       }
     );
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -71,6 +83,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setSession(data.session);
       setUser(data.session ? mapSupabaseUserToAppUser(data.session.user) : null);
+
+      // Store user role in localStorage for debugging
+      localStorage.setItem('userRole', data.session?.user?.user_metadata?.role || '');
+
+      // Redirect based on role
+      const role = data.session?.user?.user_metadata?.role;
+      if (role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/school/dashboard');
+      }
+
       return data;
     } catch (error: any) {
       setError(error.message);
@@ -83,6 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut();
       setSession(null);
       setUser(null);
+      localStorage.removeItem('userRole');
+      navigate('/login');
     } catch (error: any) {
       setError(error.message);
       throw error;

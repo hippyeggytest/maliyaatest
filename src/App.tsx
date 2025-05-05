@@ -1,17 +1,31 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import LoginForm from './components/auth/LoginForm';
 import SchoolDashboard from './pages/school/SchoolDashboard';
 import ControlCenter from './pages/admin/ControlCenter';
+import { useEffect } from 'react';
 
 const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) => {
   const { user, isAdmin } = useAuth();
+  const location = useLocation();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('ProtectedRoute Debug:', {
+      user,
+      isAdmin: isAdmin(),
+      requireAdmin,
+      path: location.pathname,
+      userRole: localStorage.getItem('userRole')
+    });
+  }, [user, isAdmin, requireAdmin, location]);
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
   if (requireAdmin && !isAdmin()) {
+    console.log('Redirecting non-admin user to school dashboard');
     return <Navigate to="/school/dashboard" replace />;
   }
 
@@ -19,6 +33,19 @@ const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.Re
 };
 
 const App = () => {
+  const { user, isAdmin } = useAuth();
+  const location = useLocation();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('App Debug:', {
+      user,
+      isAdmin: isAdmin(),
+      path: location.pathname,
+      userRole: localStorage.getItem('userRole')
+    });
+  }, [user, isAdmin, location]);
+
   return (
     <div className="min-h-screen bg-gray-50 font-tajawal">
       <Routes>

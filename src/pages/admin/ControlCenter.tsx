@@ -8,15 +8,23 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Book, Home, School, Users as UsersIcon, CreditCard, LogOut } from 'lucide-react';
 
 const ControlCenter = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const [serverStatus, setServerStatus] = useState<'online' | 'offline'>('online');
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // Debug logging
+    console.log('ControlCenter Debug:', {
+      user,
+      isAdmin: isAdmin(),
+      userRole: localStorage.getItem('userRole')
+    });
+
     // Check Supabase connection
     const checkConnection = async () => {
       try {
@@ -31,16 +39,27 @@ const ControlCenter = () => {
     const interval = setInterval(checkConnection, 30000); // Check every 30s
     
     return () => clearInterval(interval);
-  }, []);
+  }, [user, isAdmin]);
 
   // Redirect if not logged in or not admin
   if (!user) {
+    console.log('No user found, redirecting to login');
     return <Navigate to="/login" />;
   }
 
-  if (user.user_metadata?.role !== 'admin') {
-    return <Navigate to="/dashboard" />;
+  if (!isAdmin()) {
+    console.log('User is not admin, redirecting to school dashboard');
+    return <Navigate to="/school/dashboard" />;
   }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 font-tajawal">
@@ -64,11 +83,11 @@ const ControlCenter = () => {
             </div>
             
             <div className="text-sm">
-              {user.user_metadata?.full_name} ({user.email})
+              {user.name} ({user.email})
             </div>
             
             <button 
-              onClick={signOut}
+              onClick={handleSignOut}
               className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm flex items-center transition-colors"
             >
               <LogOut className="h-4 w-4 ml-1" />
