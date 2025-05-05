@@ -1,6 +1,14 @@
 -- Enable RLS on schools table
 ALTER TABLE schools ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Admins can do everything with schools" ON schools;
+DROP POLICY IF EXISTS "Allow authenticated users to create schools" ON schools;
+DROP POLICY IF EXISTS "School admins can read their own school" ON schools;
+DROP POLICY IF EXISTS "School admins can update their own school" ON schools;
+DROP POLICY IF EXISTS "Teachers can read their school" ON schools;
+DROP POLICY IF EXISTS "Students can read their school" ON schools;
+
 -- Create policies for schools table
 
 -- Allow admins to do everything
