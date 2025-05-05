@@ -21,9 +21,6 @@ type School = {
   id: number;
   name: string;
   logo: string | null;
-  address: string;
-  phone: string;
-  email: string;
   status: 'active' | 'inactive';
   created_at: string;
   updated_at: string;
@@ -38,9 +35,6 @@ const Schools = () => {
   const [formData, setFormData] = useState<Partial<School>>({
     name: '',
     logo: null,
-    address: '',
-    phone: '',
-    email: '',
     status: 'active'
   });
   const [isEditing, setIsEditing] = useState(false);
@@ -86,6 +80,18 @@ const Schools = () => {
       setLoading(true);
       setError(null);
       
+      // Validate required fields
+      const requiredFields = ['name', 'status'];
+      const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+      
+      if (missingFields.length > 0) {
+        setError(`الرجاء إدخال: ${missingFields.join('، ')}`);
+        return;
+      }
+
+      // Log the data being sent
+      console.log('Submitting school data:', formData);
+      
       if (isEditing && formData.id) {
         const { id, ...dataToUpdate } = formData;
         const updated = await supabase.update('schools', id, dataToUpdate);
@@ -98,7 +104,7 @@ const Schools = () => {
         const { id, ...dataToCreate } = formData;
         const created = await supabase.create('schools', {
           ...dataToCreate,
-          name: dataToCreate.name || '', // Ensure name is not undefined
+          name: dataToCreate.name || '',
           status: dataToCreate.status || 'active'
         });
         if (created) {
@@ -109,7 +115,7 @@ const Schools = () => {
       }
     } catch (error) {
       console.error('Error saving school:', error);
-      setError('Failed to save school');
+      setError('فشل في حفظ بيانات المدرسة. الرجاء المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -119,9 +125,6 @@ const Schools = () => {
     setFormData({
       name: '',
       logo: null,
-      address: '',
-      phone: '',
-      email: '',
       status: 'active'
     });
     setLogoPreview(null);
@@ -262,57 +265,6 @@ const Schools = () => {
               </div>
 
               <div className="sm:col-span-6">
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                  العنوان
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="text"
-                    name="address"
-                    id="address"
-                    required
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    className="form-input block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-3">
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                  رقم الهاتف
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="text"
-                    name="phone"
-                    id="phone"
-                    required
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="form-input block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-3">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  البريد الإلكتروني
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="email"
-                    name="email"
-                    id="email"
-                    required
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="form-input block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
-              
-              <div className="sm:col-span-6">
                 <label className="block text-sm font-medium text-gray-700">
                   شعار المدرسة
                 </label>
@@ -439,17 +391,20 @@ const Schools = () => {
                   </div>
                   <div className="mt-4 sm:flex sm:justify-between">
                     <div className="sm:flex">
-                      <p className="flex items-center text-sm text-gray-500 ml-6">
-                        <MapPin className="flex-shrink-0 ml-1.5 h-5 w-5 text-gray-400" />
-                        {school.address}
+                      <p className="flex items-center text-sm text-gray-500">
+                        <SchoolIcon className="flex-shrink-0 ml-1.5 h-5 w-5 text-gray-400" />
+                        {school.name}
                       </p>
                       <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 ml-6">
-                        <Phone className="flex-shrink-0 ml-1.5 h-5 w-5 text-gray-400" />
-                        {school.phone}
-                      </p>
-                      <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                        <Mail className="flex-shrink-0 ml-1.5 h-5 w-5 text-gray-400" />
-                        {school.email}
+                        <span
+                          className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-medium rounded-full ${
+                            school.status === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {school.status === 'active' ? 'نشط' : 'غير نشط'}
+                        </span>
                       </p>
                     </div>
                   </div>

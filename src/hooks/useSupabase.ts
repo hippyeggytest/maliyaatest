@@ -14,11 +14,17 @@ export const useSupabase = () => {
     }
   ) => {
     try {
-      let queryBuilder = client.from(table as string).select(query?.select || '*');
+      if (!table || typeof table !== 'string') {
+        throw new Error('Invalid table name');
+      }
+
+      let queryBuilder = client.from(table).select(query?.select || '*');
 
       if (query?.filters) {
         for (const [key, value] of Object.entries(query.filters)) {
-          queryBuilder = queryBuilder.eq(key, value);
+          if (value !== undefined && value !== null) {
+            queryBuilder = queryBuilder.eq(key, value);
+          }
         }
       }
 
@@ -47,8 +53,16 @@ export const useSupabase = () => {
     data: Database['public']['Tables'][T]['Insert']
   ) => {
     try {
+      if (!table || typeof table !== 'string') {
+        throw new Error('Invalid table name');
+      }
+
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid data object');
+      }
+
       const { data: result, error } = await client
-        .from(table as string)
+        .from(table)
         .insert(data)
         .select()
         .single();
@@ -67,8 +81,20 @@ export const useSupabase = () => {
     data: Partial<Database['public']['Tables'][T]['Update']>
   ) => {
     try {
+      if (!table || typeof table !== 'string') {
+        throw new Error('Invalid table name');
+      }
+
+      if (!id || typeof id !== 'number') {
+        throw new Error('Invalid ID');
+      }
+
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid data object');
+      }
+
       const { data: result, error } = await client
-        .from(table as string)
+        .from(table)
         .update(data)
         .eq('id', id)
         .select()
@@ -87,7 +113,15 @@ export const useSupabase = () => {
     id: number
   ) => {
     try {
-      const { error } = await client.from(table as string).delete().eq('id', id);
+      if (!table || typeof table !== 'string') {
+        throw new Error('Invalid table name');
+      }
+
+      if (!id || typeof id !== 'number') {
+        throw new Error('Invalid ID');
+      }
+
+      const { error } = await client.from(table).delete().eq('id', id);
       if (error) throw error;
       return true;
     } catch (error) {
