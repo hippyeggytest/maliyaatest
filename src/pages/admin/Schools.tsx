@@ -24,44 +24,49 @@ type School = {
   address: string;
   phone: string;
   email: string;
-  status: 'active' | 'inactive' | 'pending';
-  subscription_start: string;
-  subscription_end: string;
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
 };
 
 const Schools = () => {
-  const { 
-    loading, 
-    error, 
-    fetchAll, 
-    create, 
-    update, 
-    remove 
-  } = useSupabase<School>('schools');
+  const supabase = useSupabase();
   
   const [schools, setSchools] = useState<School[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [formData, setFormData] = useState<Partial<School>>({
     name: '',
-    logo: '',
+    logo: null,
     address: '',
     phone: '',
     email: '',
-    status: 'active',
-    subscription_start: new Date().toISOString().split('T')[0],
-    subscription_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    status: 'active'
   });
   const [isEditing, setIsEditing] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadSchools();
   }, []);
 
   const loadSchools = async () => {
-    const data = await fetchAll({ orderBy: 'name' });
-    setSchools(data);
+    try {
+      setLoading(true);
+      const data = await supabase.fetch('schools', { 
+        orderBy: { column: 'name', ascending: true }
+      });
+      if (data && Array.isArray(data)) {
+        setSchools(data as unknown as School[]);
+      }
+    } catch (error) {
+      console.error('Error loading schools:', error);
+      setError('Failed to load schools');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -78,47 +83,53 @@ const Schools = () => {
     e.preventDefault();
     
     try {
+      setLoading(true);
+      setError(null);
+      
       if (isEditing && formData.id) {
-        const updated = await update(formData.id, formData);
+        const { id, ...dataToUpdate } = formData;
+        const updated = await supabase.update('schools', id, dataToUpdate);
         if (updated) {
-          loadSchools();
+          await loadSchools();
           setShowForm(false);
           resetForm();
         }
       } else {
-        const created = await create(formData);
+        const { id, ...dataToCreate } = formData;
+        const created = await supabase.create('schools', {
+          ...dataToCreate,
+          name: dataToCreate.name || '', // Ensure name is not undefined
+          status: dataToCreate.status || 'active'
+        });
         if (created) {
-          loadSchools();
+          await loadSchools();
           setShowForm(false);
           resetForm();
         }
       }
     } catch (error) {
       console.error('Error saving school:', error);
+      setError('Failed to save school');
+    } finally {
+      setLoading(false);
     }
   };
   
   const resetForm = () => {
     setFormData({
       name: '',
-      logo: '',
+      logo: null,
       address: '',
       phone: '',
       email: '',
-      status: 'active',
-      subscription_start: new Date().toISOString().split('T')[0],
-      subscription_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      status: 'active'
     });
     setLogoPreview(null);
     setIsEditing(false);
   };
 
   const handleEdit = (school: School) => {
-    setFormData({
-      ...school,
-      subscription_start: new Date(school.subscription_start).toISOString().split('T')[0],
-      subscription_end: new Date(school.subscription_end).toISOString().split('T')[0]
-    });
+    setFormData(school);
     setLogoPreview(school.logo);
     setIsEditing(true);
     setShowForm(true);
@@ -130,19 +141,35 @@ const Schools = () => {
   
   const confirmDeleteSchool = async () => {
     if (confirmDelete) {
-      const deleted = await remove(confirmDelete);
-      if (deleted) {
-        loadSchools();
+      try {
+        setLoading(true);
+        const deleted = await supabase.remove('schools', confirmDelete);
+        if (deleted) {
+          await loadSchools();
+        }
+      } catch (error) {
+        console.error('Error deleting school:', error);
+        setError('Failed to delete school');
+      } finally {
+        setLoading(false);
+        setConfirmDelete(null);
       }
-      setConfirmDelete(null);
     }
   };
   
   const toggleSchoolStatus = async (school: School) => {
-    const newStatus = school.status === 'active' ? 'inactive' : 'active';
-    const updated = await update(school.id, { status: newStatus });
-    if (updated) {
-      loadSchools();
+    try {
+      setLoading(true);
+      const newStatus = school.status === 'active' ? 'inactive' : 'active';
+      const updated = await supabase.update('schools', school.id, { status: newStatus });
+      if (updated) {
+        await loadSchools();
+      }
+    } catch (error) {
+      console.error('Error toggling school status:', error);
+      setError('Failed to update school status');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -188,7 +215,7 @@ const Schools = () => {
 
       {error && (
         <div className="mb-4 bg-red-50 text-red-800 p-4 rounded-md border border-red-200">
-          حدث خطأ: {error.message}
+          حدث خطأ: {error}
         </div>
       )}
 
@@ -230,7 +257,6 @@ const Schools = () => {
                   >
                     <option value="active">نشط</option>
                     <option value="inactive">غير نشط</option>
-                    <option value="pending">قيد المعالجة</option>
                   </select>
                 </div>
               </div>
@@ -319,40 +345,6 @@ const Schools = () => {
                   </div>
                 </div>
               </div>
-              
-              <div className="sm:col-span-3">
-                <label htmlFor="subscription_start" className="block text-sm font-medium text-gray-700">
-                  تاريخ بداية الاشتراك
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="date"
-                    name="subscription_start"
-                    id="subscription_start"
-                    required
-                    value={formData.subscription_start}
-                    onChange={handleInputChange}
-                    className="form-input block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
-              
-              <div className="sm:col-span-3">
-                <label htmlFor="subscription_end" className="block text-sm font-medium text-gray-700">
-                  تاريخ نهاية الاشتراك
-                </label>
-                <div className="mt-1">
-                  <input
-                    type="date"
-                    name="subscription_end"
-                    id="subscription_end"
-                    required
-                    value={formData.subscription_end}
-                    onChange={handleInputChange}
-                    className="form-input block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
             </div>
 
             <div className="mt-6 flex justify-end space-x-3 gap-3">
@@ -405,16 +397,10 @@ const Schools = () => {
                             className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-medium rounded-full ${
                               school.status === 'active'
                                 ? 'bg-green-100 text-green-800'
-                                : school.status === 'inactive'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
                             }`}
                           >
-                            {school.status === 'active'
-                              ? 'نشط'
-                              : school.status === 'inactive'
-                              ? 'غير نشط'
-                              : 'قيد المعالجة'}
+                            {school.status === 'active' ? 'نشط' : 'غير نشط'}
                           </span>
                         </div>
                       </div>
@@ -464,14 +450,6 @@ const Schools = () => {
                       <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
                         <Mail className="flex-shrink-0 ml-1.5 h-5 w-5 text-gray-400" />
                         {school.email}
-                      </p>
-                    </div>
-                    <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                      <p>
-                        الاشتراك ينتهي في:{' '}
-                        <time dateTime={school.subscription_end}>
-                          {new Date(school.subscription_end).toLocaleDateString('ar-SA', { calendar: 'gregory' })}
-                        </time>
                       </p>
                     </div>
                   </div>
