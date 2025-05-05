@@ -20,7 +20,7 @@ type User = {
   id: number;
   username: string;
   name: string;
-  role: 'admin' | 'school_admin' | 'teacher' | 'student';
+  role: 'admin' | 'school_admin' | 'main_supervisor' | 'grades_supervisor';
   email: string;
   school_id: number | null;
   grade: string | null;
@@ -41,7 +41,7 @@ type UserFormData = {
   id?: number;
   username: string;
   name: string;
-  role: 'admin' | 'school_admin' | 'teacher' | 'student';
+  role: 'admin' | 'school_admin' | 'main_supervisor' | 'grades_supervisor';
   email: string;
   school_id: number | null;
   grade: string | null;
@@ -65,7 +65,6 @@ const Users = () => {
     grade: null
   });
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
   const [groupedUsers, setGroupedUsers] = useState<{[key: string]: User[]}>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,14 +128,6 @@ const Users = () => {
     }
   };
 
-  const handleGradeChange = (grade: string) => {
-    if (selectedGrades.includes(grade)) {
-      setSelectedGrades(selectedGrades.filter(g => g !== grade));
-    } else {
-      setSelectedGrades([...selectedGrades, grade]);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -144,15 +135,10 @@ const Users = () => {
       setLoading(true);
       setError(null);
       
-      // Handle multiple grades for grade supervisors
       const updatedData = { ...formData };
-      if (formData.role === 'teacher' && selectedGrades.length > 0) {
-        updatedData.grade = selectedGrades.join(',');
-      }
       
       if (isEditing && formData.id) {
         const { id, password, ...dataToUpdate } = updatedData;
-        // Ensure id is defined before calling update
         if (id) {
           const updated = await supabase.update('users', id, dataToUpdate);
           if (updated) {
@@ -187,7 +173,6 @@ const Users = () => {
       school_id: null,
       grade: null
     });
-    setSelectedGrades([]);
     setIsEditing(false);
   };
 
@@ -235,7 +220,6 @@ const Users = () => {
     if (confirmResetPassword) {
       try {
         setLoading(true);
-        // Use any type to bypass type checking for password field
         const dataToUpdate = {
           password: '123456' // Default password
         } as any;
@@ -395,8 +379,8 @@ const Users = () => {
                   >
                     <option value="admin">مدير النظام</option>
                     <option value="school_admin">مدير مدرسة</option>
-                    <option value="teacher">معلم</option>
-                    <option value="student">طالب</option>
+                    <option value="main_supervisor">المشرف الرئيسي</option>
+                    <option value="grades_supervisor">مشرف الدرجات</option>
                   </select>
                 </div>
               </div>
@@ -421,30 +405,6 @@ const Users = () => {
                   </select>
                 </div>
               </div>
-
-              {formData.role === 'teacher' && (
-                <div className="sm:col-span-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    الصفوف
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {grades.map((grade) => (
-                      <div key={grade} className="flex items-center">
-                        <input
-                          id={`grade-${grade}`}
-                          type="checkbox"
-                          checked={selectedGrades.includes(grade)}
-                          onChange={() => handleGradeChange(grade)}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor={`grade-${grade}`} className="mr-2 block text-sm text-gray-700">
-                          {grade}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="mt-6 flex justify-end space-x-3 gap-3">
@@ -563,23 +523,12 @@ const Users = () => {
                               <span className={`px-2 py-0.5 rounded-full text-xs ${
                                 user.role === 'school_admin' 
                                   ? 'bg-blue-100 text-blue-800' 
-                                  : user.role === 'teacher' 
-                                    ? 'bg-purple-100 text-purple-800'
-                                    : 'bg-gray-100 text-gray-800'
+                                  : 'bg-gray-100 text-gray-800'
                               }`}>
-                                {user.role === 'school_admin' ? 'مدير مدرسة' : user.role === 'teacher' ? 'معلم' : 'طالب'}
+                                {user.role === 'school_admin' ? 'مدير مدرسة' : user.role === 'main_supervisor' ? 'المشرف الرئيسي' : 'مشرف الدرجات'}
                               </span>
                             </div>
                           </div>
-                          {user.role === 'teacher' && user.grade && (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {user.grade.split(',').map(grade => (
-                                <span key={grade} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
-                                  {grade.trim()}
-                                </span>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       </div>
                       <div className="flex space-x-2 gap-2">
@@ -672,4 +621,3 @@ const Users = () => {
 };
 
 export default Users;
- 

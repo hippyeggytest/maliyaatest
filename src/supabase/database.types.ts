@@ -33,6 +33,7 @@ export interface Database {
         Row: {
           id: string
           email: string
+          role: 'admin' | 'school_admin' | 'main_supervisor' | 'grades_supervisor'
           created_at: string
           updated_at: string
           is_admin: boolean
@@ -41,6 +42,7 @@ export interface Database {
         Insert: {
           id?: string
           email: string
+          role: 'admin' | 'school_admin' | 'main_supervisor' | 'grades_supervisor'
           created_at?: string
           updated_at?: string
           is_admin?: boolean
@@ -49,6 +51,7 @@ export interface Database {
         Update: {
           id?: string
           email?: string
+          role?: 'admin' | 'school_admin' | 'main_supervisor' | 'grades_supervisor'
           created_at?: string
           updated_at?: string
           is_admin?: boolean
@@ -189,4 +192,3 @@ export interface Database {
     }
   }
 }
- 
