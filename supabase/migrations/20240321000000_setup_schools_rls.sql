@@ -22,10 +22,10 @@ FOR SELECT
 TO authenticated
 USING (
   auth.role() = 'school_admin' AND
-  id::text = (
-    SELECT school_id::text 
+  id = (
+    SELECT school_id::bigint 
     FROM users 
-    WHERE id = auth.uid()
+    WHERE id::text = auth.uid()::text
   )
 );
 
@@ -36,18 +36,18 @@ FOR UPDATE
 TO authenticated
 USING (
   auth.role() = 'school_admin' AND
-  id::text = (
-    SELECT school_id::text 
+  id = (
+    SELECT school_id::bigint 
     FROM users 
-    WHERE id = auth.uid()
+    WHERE id::text = auth.uid()::text
   )
 )
 WITH CHECK (
   auth.role() = 'school_admin' AND
-  id::text = (
-    SELECT school_id::text 
+  id = (
+    SELECT school_id::bigint 
     FROM users 
-    WHERE id = auth.uid()
+    WHERE id::text = auth.uid()::text
   )
 );
 
@@ -58,10 +58,10 @@ FOR SELECT
 TO authenticated
 USING (
   auth.role() = 'teacher' AND
-  id::text = (
-    SELECT school_id::text 
+  id = (
+    SELECT school_id::bigint 
     FROM users 
-    WHERE id = auth.uid()
+    WHERE id::text = auth.uid()::text
   )
 );
 
@@ -72,9 +72,9 @@ FOR SELECT
 TO authenticated
 USING (
   auth.role() = 'student' AND
-  id::text = (
-    SELECT school_id::text 
+  id = (
+    SELECT school_id::bigint 
     FROM users 
-    WHERE id = auth.uid()
+    WHERE id::text = auth.uid()::text
   )
 ); 
