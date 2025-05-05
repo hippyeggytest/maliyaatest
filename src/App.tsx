@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import LoginForm from './components/auth/LoginForm';
 import SchoolDashboard from './pages/school/SchoolDashboard';
-import AdminDashboard from './pages/admin/AdminDashboard';
+import ControlCenter from './pages/admin/ControlCenter';
 
 const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode; requireAdmin?: boolean }) => {
   const { user, isAdmin } = useAuth();
@@ -35,7 +35,7 @@ const App = () => {
           path="/admin"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminDashboard />
+              <ControlCenter />
             </ProtectedRoute>
           }
         />
